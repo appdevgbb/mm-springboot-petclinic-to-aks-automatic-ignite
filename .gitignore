@@ -1,0 +1,10 @@
+# Spring Boot PetClinic Workshop - Git Ignore
+
+# Source code directory (cloned from external repository)
+/src/
+
+# Environment variables and secrets
+.env
+
+# Application logs
+app.log
