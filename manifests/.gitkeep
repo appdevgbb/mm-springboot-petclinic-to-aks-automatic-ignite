@@ -1,2 +1,0 @@
-# This file ensures the manifests directory is tracked in git
-# Kubernetes manifests will be generated here by Containerization Assist

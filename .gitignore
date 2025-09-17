@@ -5,6 +5,13 @@
 
 # Environment variables and secrets
 .env
+azure.env
 
 # Application logs
 app.log
+
+# Bicep files
+*.bicep.parameters.json
+*.bicep.parameters.*.json
+!parameters.json
+!*.bicepparam

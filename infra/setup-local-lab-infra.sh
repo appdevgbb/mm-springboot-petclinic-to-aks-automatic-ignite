@@ -2,11 +2,17 @@
 
 # Spring Boot PetClinic Workshop - Quick Start Script
 # This script sets up the entire workshop environment
+# Usage: ./setup-local-lab-infra.sh [FORK_URL]
+# Example: ./setup-local-lab-infra.sh https://github.com/YOUR_USERNAME/spring-petclinic
 
 set -e
 
+# Default to the original repository if no fork URL provided
+FORK_URL=${1:-"https://github.com/spring-projects/spring-petclinic"}
+
 echo "🚀 Spring Boot PetClinic Migration Workshop - Quick Start"
 echo "========================================================"
+echo "📥 Using repository: $FORK_URL"
 echo ""
 
 # Check prerequisites
@@ -30,36 +36,59 @@ fi
 echo "✅ Azure login verified!"
 echo ""
 
-# Create src directory for the Spring Boot application
-echo "📁 Creating src directory for Spring Boot application..."
-if [ -d "src" ]; then
-    echo "📁 src directory already exists. Removing..."
+# Clone Spring Boot PetClinic to user's root directory
+echo "📥 Cloning Spring Boot PetClinic repository to your home directory..."
+cd ~
+if [ -d "spring-petclinic" ]; then
+    echo "📁 spring-petclinic directory already exists. Removing..."
+    rm -rf "spring-petclinic"
+fi
+
+git clone $FORK_URL spring-petclinic
+echo "✅ Repository cloned successfully to ~/spring-petclinic!"
+echo ""
+
+# Create symlink in workshop directory for easy access
+echo "🔗 Creating symlink in workshop directory..."
+cd "$OLDPWD"
+if [ -L "src" ]; then
+    echo "📁 Removing existing symlink..."
+    rm "src"
+elif [ -d "src" ]; then
+    echo "📁 Removing existing src directory..."
     rm -rf "src"
 fi
 
-mkdir -p "src"
-echo "📁 Created src directory: src/"
-echo ""
-
-# Clone Spring Boot PetClinic into src directory
-echo "📥 Cloning Spring Boot PetClinic repository into src/..."
-cd "src"
-git clone https://github.com/spring-projects/spring-petclinic.git .
-echo "✅ Repository cloned successfully into src/!"
+ln -s ~/spring-petclinic src
+echo "✅ Symlink created: src -> ~/spring-petclinic"
 echo ""
 
 # Start PostgreSQL container
 echo "🐘 Starting PostgreSQL container..."
-docker run --name petclinic-postgres \
-  -e POSTGRES_DB=petclinic \
-  -e POSTGRES_USER=petclinic \
-  -e POSTGRES_PASSWORD=petclinic \
-  -p 5432:5432 \
-  -d postgres:15
-
-echo "⏳ Waiting for PostgreSQL to be ready..."
-sleep 15
-echo "✅ PostgreSQL container is running!"
+if docker ps -a --format "table {{.Names}}" | grep -q "^petclinic-postgres$"; then
+    echo "📦 PostgreSQL container already exists. Checking if it's running..."
+    if docker ps --format "table {{.Names}}" | grep -q "^petclinic-postgres$"; then
+        echo "✅ PostgreSQL container is already running!"
+    else
+        echo "🔄 Starting existing PostgreSQL container..."
+        docker start petclinic-postgres
+        echo "⏳ Waiting for PostgreSQL to be ready..."
+        sleep 10
+        echo "✅ PostgreSQL container is now running!"
+    fi
+else
+    echo "🆕 Creating new PostgreSQL container..."
+    docker run --name petclinic-postgres \
+      -e POSTGRES_DB=petclinic \
+      -e POSTGRES_USER=petclinic \
+      -e POSTGRES_PASSWORD=petclinic \
+      -p 5432:5432 \
+      -d postgres:15
+    
+    echo "⏳ Waiting for PostgreSQL to be ready..."
+    sleep 15
+    echo "✅ PostgreSQL container is running!"
+fi
 echo ""
 
 # Configure local database connection
@@ -105,14 +134,25 @@ echo "🎉 Workshop environment setup completed!"
 echo ""
 echo "📋 Next Steps:"
 echo "   1. Your local PetClinic app is running at http://localhost:8080"
-echo "   2. Open the project in VS Code: code src/"
+echo "   2. Open the project in VS Code: code ~/spring-petclinic/"
 echo "   3. Use GitHub Copilot App Modernization to upgrade the codebase"
-echo "   4. Run the Azure infrastructure setup: ./scripts/setup-azure-infrastructure.sh"
+echo "   4. Run the Azure infrastructure setup: ./infra/setup-azure-infra.sh"
 echo "   5. Use Containerization Assist to generate Docker and K8s manifests"
 echo "   6. Deploy to AKS and test the modernized application"
 echo ""
+echo "💡 Note: You're working with your forked repository at: $FORK_URL"
+echo "   Your code is located at: ~/spring-petclinic/"
+echo "   A symlink is available at: src/ (points to ~/spring-petclinic/)"
+echo "   Any changes you make can be committed and pushed to your fork."
+echo ""
 echo "🧹 To clean up local resources:"
+echo "   # Stop and remove PostgreSQL container:"
 echo "   docker stop petclinic-postgres && docker rm petclinic-postgres"
+echo "   # Stop the Spring Boot application:"
 echo "   kill $APP_PID"
+echo "   # Remove the symlink:"
+echo "   rm src"
+echo "   # Or stop all containers:"
+echo "   docker stop \$(docker ps -q)"
 echo ""
 echo "🚀 Lets get to modernizing!"

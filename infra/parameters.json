@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupName": {
+      "value": "YOUR_RESOURCE_GROUP_NAME"
+    },
+    "location": {
+      "value": "YOUR_LOCATION"
+    },
+    "aksClusterName": {
+      "value": "aks-petclinic"
+    },
+    "postgresServerName": {
+      "value": "postgres-petclinic"
+    },
+    "redisCacheName": {
+      "value": "redis-petclinic"
+    },
+    "postgresDatabaseName": {
+      "value": "petclinic"
+    },
+    "azureADObjectId": {
+      "value": "YOUR_AZURE_AD_OBJECT_ID"
+    },
+  "azureADUserPrincipalName": {
+    "value": "YOUR_AZURE_AD_UPN"
+  },
+  "userAssignedIdentityName": {
+    "value": "petclinic-app-uami-yqkjlqj5mgv34"
+  },
+  "tags": {
+      "value": {
+        "Environment": "Development",
+        "Project": "AKS-Bicep-Demo",
+        "ManagedBy": "Bicep",
+        "Owner": "DevTeam"
+      }
+    }
+  }
+}
