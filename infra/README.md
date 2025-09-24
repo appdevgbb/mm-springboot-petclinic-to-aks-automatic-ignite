@@ -4,7 +4,6 @@ This repository contains Azure Bicep templates to deploy a complete workshop env
 
 - **Azure Kubernetes Service (AKS)** with Automatic SKU
 - **Azure Database for PostgreSQL Flexible Server** with Entra ID authentication
-- **Azure Cache for Redis** with Entra ID authentication
 - **Service Linkers** for secure, passwordless connections
 
 ## Architecture
@@ -18,17 +17,13 @@ petclinic-workshop-rg/
 │   ├── Log Analytics Workspace
 │   ├── Monitoring addon
 │   ├── System Assigned Managed Identity
-│   ├── Service Linker → PostgreSQL
-│   └── Service Linker → Redis
+│   └── Service Linker → PostgreSQL
 ├── PostgreSQL Flexible Server
 │   ├── Development profile (Burstable B1ms)
 │   ├── Database (petclinic)
 │   ├── Entra ID Administrator
 │   ├── Entra ID authentication only
 │   └── Firewall rule (Azure services)
-├── Redis Cache
-│   ├── Standard C1 tier
-│   └── Entra ID authentication
 └── User Assigned Managed Identity
     └── Used by Service Linkers
 ```
@@ -84,7 +79,6 @@ az deployment sub create \
 | `location` | Azure region | `westus3` | Valid region |
 | `aksClusterName` | AKS cluster name | `petclinic-workshop-aks-{unique}` | 1-63 chars |
 | `postgresServerName` | PostgreSQL server name | `petclinic-workshop-postgres-{unique}` | 1-63 chars |
-| `redisCacheName` | Redis cache name | `petclinic-workshop-redis-{unique}` | 1-63 chars |
 | `postgresDatabaseName` | Database name | `petclinic` | 1-63 chars |
 | `azureADObjectId` | Azure AD Object ID for PostgreSQL admin | Auto-detected | Valid Object ID |
 | `azureADUserPrincipalName` | Azure AD UPN for PostgreSQL admin | Auto-detected | Valid UPN |
@@ -108,14 +102,6 @@ az deployment sub create \
 - **Backup**: 7 days retention
 - **High Availability**: Disabled (development)
 
-#### Redis Cache
-- **Tier**: Standard
-- **SKU**: C1 (1 GB)
-- **Version**: Redis 6
-- **SSL**: Required
-- **TLS**: Minimum 1.2
-- **Authentication**: Entra ID enabled
-
 ## Post-Deployment
 
 After successful deployment, you can:
@@ -137,15 +123,6 @@ az postgres flexible-server connect \
   --name $POSTGRES_NAME \
   --database petclinic \
   --admin-user $(az ad signed-in-user show --query userPrincipalName -o tsv)
-```
-
-### Get Redis Connection String
-```bash
-# Get the dynamically generated Redis cache name
-REDIS_NAME=$(az redis list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv)
-az redis list-keys \
-  --resource-group petclinic-workshop-rg \
-  --name $REDIS_NAME
 ```
 
 ## File Structure
@@ -180,11 +157,6 @@ This deployment includes Azure Service Linkers that create secure connections be
 - **Authentication**: User Assigned Managed Identity
 - **Benefits**: Automatic connection string management, secure authentication, no password management
 
-### Redis Service Linker  
-- **Connection**: AKS → Azure Cache for Redis
-- **Authentication**: User Assigned Managed Identity
-- **Benefits**: Automatic connection string management, secure authentication, no password management
-
 ### Managed Identity Architecture
 - **AKS Identity**: System Assigned Managed Identity for cluster operations
 - **Service Linker Identity**: User Assigned Managed Identity for application connections
@@ -196,7 +168,6 @@ This deployment includes Azure Service Linkers that create secure connections be
 ## Security Considerations
 
 - PostgreSQL uses Entra ID authentication only (no passwords)
-- Redis uses Entra ID authentication with SSL connections
 - AKS uses system-assigned managed identity for cluster operations
 - Service Linkers use user-assigned managed identity for application connections
 - Service Linkers provide secure, passwordless connections
@@ -207,7 +178,6 @@ This deployment includes Azure Service Linkers that create secure connections be
 ## Cost Optimization
 
 - **Development profile** for PostgreSQL (burstable tier)
-- **Standard tier** Redis cache (not Premium)
 - **Automatic SKU** AKS (managed node scaling)
 - **7-day backup retention** (minimum for development)
 

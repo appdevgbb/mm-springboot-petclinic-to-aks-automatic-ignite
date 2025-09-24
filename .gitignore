@@ -15,3 +15,5 @@ app.log
 *.bicep.parameters.*.json
 !parameters.json
 !*.bicepparam
+.DS_Store
+infra/deployment.log

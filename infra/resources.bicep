@@ -7,9 +7,6 @@ param aksClusterName string
 @description('The name of the PostgreSQL Flexible Server')
 param postgresServerName string
 
-@description('The name of the Redis Cache')
-param redisCacheName string
-
 @description('PostgreSQL database name')
 param postgresDatabaseName string
 
@@ -32,13 +29,6 @@ param tags object
 // Create User Assigned Managed Identity for PostgreSQL access
 resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: userAssignedIdentityName
-  location: location
-  tags: tags
-}
-
-// Create User Assigned Managed Identity for Redis access
-resource redisAccessIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'redis-access-uami-${uniqueString(resourceGroup().id)}'
   location: location
   tags: tags
 }
@@ -106,28 +96,6 @@ resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2
 
 // PostgreSQL Firewall Rule removed - public access enabled for lab simplicity
 
-// Azure Cache for Redis
-resource redisCache 'Microsoft.Cache/redis@2024-11-01' = {
-  name: redisCacheName
-  location: location
-  properties: {
-    sku: {
-      name: 'Standard'
-      family: 'C'
-      capacity: 1
-    }
-    enableNonSslPort: false
-    minimumTlsVersion: '1.2'
-    redisVersion: '6'
-    redisConfiguration: {
-      'aad-enabled': 'true'
-    }
-    disableAccessKeyAuthentication: true
-    publicNetworkAccess: 'Enabled' // Allow public access for lab simplicity
-  }
-  tags: tags
-}
-
 // Azure Container Registry
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: acrName
@@ -164,7 +132,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
 }
 
 // AKS Automatic Cluster
-resource aksCluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
+resource aksCluster 'Microsoft.ContainerService/managedClusters@2025-05-01' = {
   name: aksClusterName
   location: location
   sku: {
@@ -204,19 +172,6 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2025-07-01' = {
   tags: tags
 }
 
-// Federated Identity Credential for Redis access
-resource redisFederatedIdentityCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
-  parent: redisAccessIdentity
-  name: 'redis-federated-credential'
-  properties: {
-    issuer: 'https://token.actions.githubusercontent.com'
-    subject: 'system:serviceaccount:default:redis-service-account'
-    audiences: [
-      'api://AzureADTokenExchange'
-    ]
-  }
-}
-
 // Service Linkers removed - will be created via Azure CLI for better idempotency
 
 // Role assignment: Grant AcrPull to AKS kubelet managed identity
@@ -226,17 +181,6 @@ resource aksAcrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     principalId: aksCluster.properties.identityProfile.kubeletidentity.objectId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Role assignment: Grant Redis Cache Contributor to Redis access managed identity
-resource redisContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(redisAccessIdentity.id, redisCache.id, 'RedisCacheContributor')
-  scope: redisCache
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e0f68234-74aa-48ed-b826-c38b57376e17') // Redis Cache Contributor role
-    principalId: redisAccessIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -272,16 +216,8 @@ output postgresServerName string = postgresServer.name
 output postgresServerFqdn string = postgresServer.properties.fullyQualifiedDomainName
 output postgresDatabaseName string = postgresDatabase.name
 output postgresDatabaseId string = postgresDatabase.id
-output redisCacheName string = redisCache.name
-output redisCacheHostName string = redisCache.properties.hostName
-output redisCachePort string = string(redisCache.properties.port)
-output redisCacheSslPort string = string(redisCache.properties.sslPort)
-output redisCacheId string = redisCache.id
 output acrName string = acr.name
 output acrLoginServer string = acr.properties.loginServer
 output userAssignedIdentityId string = userAssignedIdentity.id
 output userAssignedIdentityClientId string = userAssignedIdentity.properties.clientId
 output userAssignedIdentityPrincipalId string = userAssignedIdentity.properties.principalId
-output redisAccessIdentityId string = redisAccessIdentity.id
-output redisAccessIdentityClientId string = redisAccessIdentity.properties.clientId
-output redisAccessIdentityPrincipalId string = redisAccessIdentity.properties.principalId

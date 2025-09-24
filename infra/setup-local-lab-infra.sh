@@ -5,7 +5,7 @@
 # Usage: ./setup-local-lab-infra.sh [FORK_URL]
 # Example: ./setup-local-lab-infra.sh https://github.com/YOUR_USERNAME/spring-petclinic
 
-set -e
+set -euo pipefail
 
 # Default to the original repository if no fork URL provided
 FORK_URL=${1:-"https://github.com/spring-projects/spring-petclinic"}
@@ -62,6 +62,10 @@ fi
 ln -s ~/spring-petclinic src
 echo "✅ Symlink created: src -> ~/spring-petclinic"
 echo ""
+
+# Change into the src directory
+echo "Changing into the src directory"
+cd src
 
 # Start PostgreSQL container
 echo "🐘 Starting PostgreSQL container..."
@@ -136,9 +140,8 @@ echo "📋 Next Steps:"
 echo "   1. Your local PetClinic app is running at http://localhost:8080"
 echo "   2. Open the project in VS Code: code ~/spring-petclinic/"
 echo "   3. Use GitHub Copilot App Modernization to upgrade the codebase"
-echo "   4. Run the Azure infrastructure setup: ./infra/setup-azure-infra.sh"
-echo "   5. Use Containerization Assist to generate Docker and K8s manifests"
-echo "   6. Deploy to AKS and test the modernized application"
+echo "   4. Use Containerization Assist to generate Docker and K8s manifests"
+echo "   5. Deploy to AKS and test the modernized application"
 echo ""
 echo "💡 Note: You're working with your forked repository at: $FORK_URL"
 echo "   Your code is located at: ~/spring-petclinic/"

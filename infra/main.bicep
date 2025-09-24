@@ -18,11 +18,6 @@ param aksClusterName string
 @maxLength(63)
 param postgresServerName string
 
-@description('The name of the Redis Cache')
-@minLength(1)
-@maxLength(63)
-param redisCacheName string
-
 @description('PostgreSQL database name')
 @minLength(1)
 @maxLength(63)
@@ -63,7 +58,6 @@ module resources 'resources.bicep' = {
     location: location
     aksClusterName: '${aksClusterName}-${uniqueString(rg.id)}'
     postgresServerName: '${postgresServerName}-${uniqueString(rg.id)}'
-    redisCacheName: '${redisCacheName}-${uniqueString(rg.id)}'
     postgresDatabaseName: postgresDatabaseName
     azureADObjectId: azureADObjectId
     azureADUserPrincipalName: azureADUserPrincipalName
@@ -83,16 +77,8 @@ output postgresServerName string = resources.outputs.postgresServerName
 output postgresServerFqdn string = resources.outputs.postgresServerFqdn
 output postgresDatabaseName string = resources.outputs.postgresDatabaseName
 output postgresDatabaseId string = resources.outputs.postgresDatabaseId
-output redisCacheName string = resources.outputs.redisCacheName
-output redisCacheHostName string = resources.outputs.redisCacheHostName
-output redisCachePort string = resources.outputs.redisCachePort
-output redisCacheSslPort string = resources.outputs.redisCacheSslPort
-output redisCacheId string = resources.outputs.redisCacheId
 output acrName string = resources.outputs.acrName
 output acrLoginServer string = resources.outputs.acrLoginServer
 output userAssignedIdentityId string = resources.outputs.userAssignedIdentityId
 output userAssignedIdentityClientId string = resources.outputs.userAssignedIdentityClientId
 output userAssignedIdentityPrincipalId string = resources.outputs.userAssignedIdentityPrincipalId
-output redisAccessIdentityId string = resources.outputs.redisAccessIdentityId
-output redisAccessIdentityClientId string = resources.outputs.redisAccessIdentityClientId
-output redisAccessIdentityPrincipalId string = resources.outputs.redisAccessIdentityPrincipalId

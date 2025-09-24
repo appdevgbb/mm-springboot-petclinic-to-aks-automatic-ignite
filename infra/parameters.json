@@ -14,9 +14,6 @@
     "postgresServerName": {
       "value": "postgres-petclinic"
     },
-    "redisCacheName": {
-      "value": "redis-petclinic"
-    },
     "postgresDatabaseName": {
       "value": "petclinic"
     },
