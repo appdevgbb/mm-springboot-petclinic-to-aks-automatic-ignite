@@ -46,9 +46,9 @@ In this module, you will create all required Azure resources using Bicep templat
 
 **What You'll Learn:** Azure Bicep deployment, AKS Automatic, PostgreSQL Flexible Server with Entra ID, and Service Linkers.
 
-AKS Automatic is an great landing zone to migrate and modernize legacy workloads because it is simplifies by default: AKS manages node provisioning and scaling, applies hardened security baselines, enables Azure RBAC and workload identity, and integrates application routing (managed NGINX) and observability out of the box letting teams focus on the app, not managing the cluster.
+AKS Automatic is a great landing zone to migrate and modernize legacy workloads because it simplifies by default: AKS manages node provisioning and scaling, applies hardened security baselines, enables Azure RBAC and workload identity, and integrates application routing (managed NGINX) and observability out of the box letting teams focus on the app, not managing the cluster.
 
-Modernizing legacy workloads pair naturally with Azure PaaS: replace the simulated on‑prem PostgreSQL with Azure Database for PostgreSQL Flexible Server using Microsoft Entra authentication for passwordless access from AKS, and use AKS Service Connector to generate the Kubernetes wiring and secrets that connect and authenticate the app to Postgres automatically.
+Modernizing legacy workloads pairs naturally with Azure PaaS: replace the simulated on‑prem PostgreSQL with Azure Database for PostgreSQL Flexible Server using Microsoft Entra authentication for passwordless access from AKS, and use AKS Service Connector to generate the Kubernetes wiring and secrets that connect and authenticate the app to Postgres automatically.
 
 See the AKS Automatic overview and engineering deep dive for details, and service docs for Entra-enabled Postgres and Service Connector: [AKS Automatic intro](https://learn.microsoft.com/en-us/azure/aks/intro-aks-automatic), [AKS Automatic engineering blog](https://blog.aks.azure.com/2024/05/22/aks-automatic).
 
@@ -174,7 +174,7 @@ Next, let's open the Petclinic project in a new instance of VS Code and begin ou
 
 **What You'll Do:** Use GitHub Copilot app modernization to assess, remediate, and modernize the Spring Boot application in preparation to migrate the workload to AKS Automatic.
 
-**What You'll Learn:** How GitHub Copilot app modernization work, demonstration of modernizing elements of legacy applications, and the modernization workflow
+**What You'll Learn:** How GitHub Copilot app modernization works, demonstration of modernizing elements of legacy applications, and the modernization workflow
 
 **Detailed Steps:**
 
@@ -371,7 +371,7 @@ The tool includes intelligent error detection capabilities that automatically id
 - Continues through validation iterations (up to 10 iterations) until the build succeeds
 
 **User Control:**
-At any point during this validation process, you may interrupt the automated fixes and manually resolve issues if you prefer to handle specific problems yourself. The tool provides clear feedback on what it's attempting to fix and allows you to take control when needed at anytime.
+At any point during this validation process, you may interrupt the automated fixes and manually resolve issues if you prefer to handle specific problems yourself. The tool provides clear feedback on what it's attempting to fix and allows you to take control when needed at any time.
 
 This systematic approach ensures your Spring Boot application is successfully modernized for Azure PostgreSQL with Entra ID authentication while maintaining full functionality.
 
@@ -382,7 +382,7 @@ Upon successful completion of the validation process, the App Modernization tool
 
 The migration has successfully transformed your application from password-based Postgres authentication to Azure Managed Identity for PostgreSQL, removing the need for credentials in code while maintaining application functionality. The process integrated Spring Cloud Azure dependencies, updated configuration properties for managed identity authentication, and ensured all validation stages passed including CVE scanning, build validation, consistency checks, and test execution.
 
-Because the workload is based on Java Springboot, an advantage of this migration is that no Java code changes were required. Spring Boot's configuration driven architecture automatically handles database connection details based on the configuration files. When switching from password authentication to managed identity, Spring reads the updated configuration and automatically uses the appropriate authentication method. Your existing Java code for database operations (such as saving pet records or retrieving owner information) continues to function as before, but now connects to the database using the more secure managed identity approach.
+Because the workload is based on Java Spring Boot, an advantage of this migration is that no Java code changes were required. Spring Boot's configuration-driven architecture automatically handles database connection details based on the configuration files. When switching from password authentication to managed identity, Spring reads the updated configuration and automatically uses the appropriate authentication method. Your existing Java code for database operations (such as saving pet records or retrieving owner information) continues to function as before, but now connects to the database using the more secure managed identity approach.
 
 **Files Modified:**
 The migration process updated the following configuration files:
