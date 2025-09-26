@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Azure Bicep Deployment Script
 set -e
@@ -119,16 +119,14 @@ echo "azure.env file created successfully!"
 echo ""
 
 # Create Service Connectors using Azure CLI
-echo "Creating Service Connectors for AKS..."
-echo "======================================"
+echo "Creating Service Connectors..."
+echo "=============================="
 
-# Register required resource providers for Service Connector
-echo "Registering required Azure resource providers..."
-az provider register -n Microsoft.ServiceLinker --output none
-az provider register -n Microsoft.KubernetesConfiguration --output none
-
-echo "✓ Resource providers registered"
-echo ""
+# Check if serviceconnector-passwordless extension is installed
+if ! az extension list --query "[?name=='serviceconnector-passwordless']" -o tsv | grep -q "serviceconnector-passwordless"; then
+    echo "Installing serviceconnector-passwordless extension..."
+    az extension add --name serviceconnector-passwordless
+fi
 
 # Function to check if a service connector exists
 check_service_connector_exists() {
@@ -162,164 +160,46 @@ create_postgres_connector() {
     fi
     
     echo "Creating PostgreSQL service connector..."
-    echo "  AKS Cluster: $AKS_CLUSTER_NAME"
-    echo "  PostgreSQL Database: $POSTGRES_DATABASE_ID"
-    echo "  Managed Identity: $USER_ASSIGNED_IDENTITY_RESOURCE_ID"
-    echo ""
     
-    # Create the service connector - this will automatically:
-    # 1. Install the sc-extension Kubernetes extension if not present
-    # 2. Enable workload identity and OIDC issuer on the cluster
-    # 3. Create the necessary Kubernetes resources (secret, service account)
-    # 4. Set up the federated identity credential
-    if az aks connection create postgres-flexible \
+    az aks connection create postgres-flexible \
         --resource-group "$RESOURCE_GROUP_NAME" \
         --name "$AKS_CLUSTER_NAME" \
         --connection "$connection_name" \
         --target-id "$POSTGRES_DATABASE_ID" \
         --workload-identity "$USER_ASSIGNED_IDENTITY_RESOURCE_ID" \
         --yes \
-        --output table; then
-        echo "✅ PostgreSQL service connector created successfully!"
-        echo ""
-        echo "The Service Connector has automatically:"
-        echo "  • Installed the sc-extension on your AKS cluster"
-        echo "  • Created Kubernetes secret and service account in 'default' namespace"
-        echo "  • Set up workload identity authentication"
-        echo "  • Configured database firewall rules"
-        return 0
-    else
-        echo "❌ Service Connector creation failed"
-        echo ""
-        echo "This could be due to:"
-        echo "  1. Azure Policy (Gatekeeper) blocking the sc-extension installation"
-        echo "  2. Missing permissions for Microsoft.ServiceLinker operations"
-        echo "  3. Network connectivity issues with the cluster"
-        echo "  4. The cluster being in an updating state"
-        echo ""
-        echo "📋 Manual Connection Information:"
-        echo "   Server FQDN: $POSTGRES_SERVER_FQDN"
-        echo "   Database: $POSTGRES_DATABASE_NAME"
-        echo "   Managed Identity Client ID: $USER_ASSIGNED_IDENTITY_CLIENT_ID"
-        echo ""
-        echo "   For troubleshooting Service Connectors, run:"
-        echo "   az k8s-extension show --resource-group $RESOURCE_GROUP_NAME \\"
-        echo "     --cluster-name $AKS_CLUSTER_NAME --cluster-type managedClusters \\"
-        echo "     --name sc-extension"
-        echo ""
-        return 1
-    fi
+        --output table
+    
+    echo "✓ PostgreSQL service connector created successfully"
 }
 
 
 
 # Create service connectors
-echo "Setting up Service Connectors for AKS cluster..."
-echo "==============================================="
-echo "Service Connector will automatically install the required Kubernetes extension"
-echo "and configure workload identity authentication for secure database access."
-echo ""
-echo "Target resources:"
-echo "  🎯 AKS Cluster: $AKS_CLUSTER_NAME"
-echo "  🗄️ PostgreSQL Database: $POSTGRES_DATABASE_ID"
-echo "  🔐 User Assigned Identity: $USER_ASSIGNED_IDENTITY_RESOURCE_ID"
+echo "Creating Service Connectors for:"
+echo "  AKS Cluster: $AKS_CLUSTER_NAME"
+echo "  PostgreSQL Database: $POSTGRES_DATABASE_ID"
+echo "  User Assigned Identity: $USER_ASSIGNED_IDENTITY_RESOURCE_ID"
 echo ""
 
-# Create PostgreSQL connector
 create_postgres_connector
-connector_result=$?
+echo ""
 
+echo "Service Connector creation completed successfully!"
 echo ""
 
 # List all connections for verification
-echo "Verifying Service Connector status..."
-if connections=$(az aks connection list \
+echo "Verifying created connections..."
+az aks connection list \
     --resource-group "$RESOURCE_GROUP_NAME" \
     --name "$AKS_CLUSTER_NAME" \
     --query "[].{Name:name,TargetService:properties.targetService.id,AuthType:properties.authInfo.authType}" \
-    --output table 2>/dev/null) && echo "$connections" | grep -q "Name"; then
-    echo "$connections"
-    echo ""
-    echo "✅ Service Connectors are configured and ready!"
-    echo ""
-    echo "📋 What was automatically configured:"
-    echo "  • sc-extension Kubernetes extension installed in your cluster"
-    echo "  • Workload identity and OIDC issuer enabled"
-    echo "  • Kubernetes secret created in 'default' namespace"
-    echo "  • Service account created with proper annotations"
-    echo "  • Database firewall rules configured"
-else
-    if [ $connector_result -eq 0 ]; then
-        echo "⚠️  Service Connector created but not showing in list (propagation delay)"
-        echo "   This is normal - the connection should be available shortly"
-    else
-        echo "ℹ️  Service Connector creation failed - manual configuration required"
-        echo "   Common causes: Azure Policy restrictions or cluster updating state"
-        echo ""
-        echo "   To retry after resolving issues:"
-        echo "   az aks connection create postgres-flexible \\"
-        echo "     --resource-group $RESOURCE_GROUP_NAME \\"
-        echo "     --name $AKS_CLUSTER_NAME \\"
-        echo "     --connection pg \\"
-        echo "     --target-id $POSTGRES_DATABASE_ID \\"
-        echo "     --workload-identity $USER_ASSIGNED_IDENTITY_RESOURCE_ID \\"
-        echo "     --yes"
-    fi
-fi
+    --output table
 
 echo ""
-echo "🎉 AKS Infrastructure Deployment Completed!"
-echo "==========================================="
+echo "Infrastructure deployment completed successfully!"
 echo ""
-echo "Your AKS cluster is ready with the following features:"
-echo "  ✅ AKS cluster with intelligent scaling (AKS Automatic)"
-echo "  ✅ PostgreSQL Flexible Server with Entra ID authentication"
-echo "  ✅ Azure Container Registry with AKS integration"
-echo "  ✅ Workload Identity configured for secure database access"
-echo "  ✅ Azure Monitor and Log Analytics enabled"
-echo ""
-echo "� Service Connector Status"
-echo "=========================="
-if [ $connector_result -eq 0 ]; then
-    echo "✅ Service Connector successfully configured!"
-    echo "   Your applications can use the automatically created Kubernetes resources:"
-    echo "   • Secret name: sc-<connection-name> (in default namespace)"
-    echo "   • Service account: sc-<connection-name> (in default namespace)"
-    echo ""
-    echo "   Example usage in deployment:"
-    echo "   spec:"
-    echo "     serviceAccountName: sc-pg"
-    echo "     containers:"
-    echo "     - name: app"
-    echo "       envFrom:"
-    echo "       - secretRef:"
-    echo "           name: sc-pg"
-else
-    echo "⚠️ Service Connector creation failed - Azure Policy likely blocked it"
-    echo ""
-    echo "📋 Manual Configuration Required:"
-    echo "1. Create Kubernetes secret:"
-    echo "   kubectl create secret generic postgres-secret \\"
-    echo "     --from-literal=POSTGRES_HOST=\"$POSTGRES_SERVER_FQDN\" \\"
-    echo "     --from-literal=POSTGRES_DB=\"$POSTGRES_DATABASE_NAME\" \\"
-    echo "     --from-literal=AZURE_CLIENT_ID=\"$USER_ASSIGNED_IDENTITY_CLIENT_ID\""
-    echo ""
-    echo "2. Create service account with workload identity:"
-    echo "   kubectl create serviceaccount petclinic-sa"
-    echo "   kubectl annotate serviceaccount petclinic-sa \\"
-    echo "     azure.workload.identity/client-id=\"$USER_ASSIGNED_IDENTITY_CLIENT_ID\""
-    echo ""
-    echo "3. Use in your deployment:"
-    echo "   spec:"
-    echo "     serviceAccountName: petclinic-sa"
-    echo "     containers:"
-    echo "     - name: petclinic"
-    echo "       envFrom:"
-    echo "       - secretRef:"
-    echo "           name: postgres-secret"
-fi
-echo ""
-echo "🚀 Next steps:"
+echo "Next steps:"
 echo "1. Source the environment file:"
 echo "   source azure.env"
 echo ""
