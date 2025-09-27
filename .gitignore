@@ -2,6 +2,7 @@
 
 # Source code directory (cloned from external repository)
 /src/
+infra/src
 
 # Environment variables and secrets
 .env
