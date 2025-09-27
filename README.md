@@ -99,6 +99,34 @@ chmod +x setup-azure-infra.sh
 ./setup-azure-infra.sh > deployment.log 2>&1 &
 ```
 
+To deploy the Azure infrastructure using the provided ARM template:
+
+```bash
+# Configuration variables
+RESOURCE_GROUP_NAME="petclinic-workshop-rg"
+LOCATION="Central US"
+DEPLOYMENT_NAME="aks-arm-deployment-$(date +%Y%m%d-%H%M%S)"
+PARAMETERS_FILE="parameters.json"
+
+# Get current user info
+CURRENT_USER_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || echo "")
+CURRENT_USER_UPN=$(az ad signed-in-user show --query userPrincipalName -o tsv 2>/dev/null || echo "")
+
+# Deploy using variables
+az deployment sub create \
+  --location "$LOCATION" \
+  --name "$DEPLOYMENT_NAME" \
+  --template-file main.json \
+  --parameters @$PARAMETERS_FILE \
+  --parameters resourceGroupName="$RESOURCE_GROUP_NAME" \
+  --parameters location="$LOCATION" \
+  --parameters azureADObjectId="$CURRENT_USER_ID" \
+  --parameters azureADUserPrincipalName="$CURRENT_USER_UPN" \
+  --parameters userAssignedIdentityName="petclinic-app-uami" \
+  --parameters acrName="petclinicacr" \
+  --output table > deployment.log 2>&1 &
+```
+
 > **Note:** The Azure infrastructure deployment is now running in the background and will take approximately 30 minutes to complete. You can follow the deployment progress by looking at the `deployment.log` file (e.g.: `tail deployment.log`).
 >
 > While it's deploying, you will continue with Module 2 to set up the PetClinic application locally and begin the modernization work.
@@ -517,16 +545,21 @@ cat k8s/service.yaml
 ### Step 1: Access AKS Service Connector and Retrieve PostgreSQL Configuration
 Navigate to your AKS cluster in the Azure Portal and access the Service Connector blade to retrieve the PostgreSQL connection configuration.
 
-1. **Open Azure Portal** and sign in to your Azure account
+1. **[Open Azure Portal](https://portal.azure.com/)** and sign in to your Azure account
 2. **Navigate to Resource Group**: In the search bar, type "petclinic-workshop-rg" and select the resource group that was created by the setup script
+<img src="images/module5-step1-2-navigate-to-rg.png" width="75%" alt="Navigate to Resource Group">
+
 3. **Find AKS Cluster**: In the resource group, locate your AKS cluster (it will have a name like `petclinic-workshop-aks-xxxxxx` where xxxxxx is a random suffix)
+<img src="images/module5-step1-3-Find-AKS-Cluster.png" width="75%" alt="Find AKS Cluster">
+
 4. **Open AKS Cluster**: Click on the AKS cluster name to open the cluster overview page
 5. **Access Service Connector**: In the left menu under "Settings", click on "Service Connector"
+<img src="images/module5-step1-aks-service-connector-postgres-view.png" width="75%" alt="AKS Service Connector PostgreSQL View">
+
 6. **View Service Connections**: You'll see the service connection that was automatically created:
    - **PostgreSQL connection** with name "pg" connecting to your PostgreSQL flexible server.
 7. **Generate YAML Snippet**: Select the PostgreSQL connection row (the one with "DB for PostgreSQL flexible server") and click the "Sample code" button in the action bar
-
-<img src="images/module5-step1-aks-service-connector-postgres-view.png" width="75%" alt="AKS Service Connector PostgreSQL View">
+<img src="images/module5-step1-azure-service-connector-postgres.png" width="75%" alt="AKS Service Connector YAML snippet">
 
 ### Step 2: Retrieve PostgreSQL YAML Configuration
 The Azure Portal will display a YAML snippet showing how to use the Service Connector secrets for PostgreSQL connectivity.
@@ -614,12 +647,14 @@ spec:
 Build the containerized application and push it to your Azure Container Registry:
 
 ```bash
-# Get ACR login server name
-ACR_LOGIN_SERVER=$(az acr show --resource-group petclinic-workshop-rg --name $(az acr list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv) --query loginServer -o tsv)
+# load your azure.env file from the
+# mm-springboot-petclinic-to-aks-automatic-ignite/infra
+
+source ~/mm-springboot-petclinic-to-aks-automatic-ignite/infra/azure.env
 echo "ACR Login Server: $ACR_LOGIN_SERVER"
 
 # Login to ACR using Azure CLI
-az acr login --name $(az acr list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv)
+az acr login --name ${ACR_NAME}
 
 # Build the Docker image
 docker build -t petclinic:latest .
@@ -636,7 +671,7 @@ Before deploying to AKS, you need to configure kubectl to use Azure RBAC authent
 
 ```bash
 # Get AKS credentials (this downloads the kubeconfig)
-az aks get-credentials --resource-group petclinic-workshop-rg --name $(az aks list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv)
+az aks get-credentials --resource-group ${RESOURCE_GROUP_NAME} --name ${AKS_CLUSTER_NAME}
 
 # Configure kubectl to use Azure RBAC authentication
 kubelogin convert-kubeconfig --login azurecli
@@ -652,7 +687,6 @@ Apply the Kubernetes manifests to deploy the application:
 
 ```bash
 # Update the deployment manifest with your ACR login server
-ACR_LOGIN_SERVER=$(az acr show --resource-group petclinic-workshop-rg --name $(az acr list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv) --query loginServer -o tsv)
 sed -i "s/<acr-login-server>/$ACR_LOGIN_SERVER/g" petclinic-deployment.yaml
 
 # Apply the deployment manifest
@@ -707,7 +741,7 @@ kubectl logs <pod-name> | grep -i "connected\|authenticated"
 1. Remove Azure resource group:
    ```bash
    # Delete entire resource group (this will clean up all resources)
-   az group delete --name petclinic-workshop-rg --yes --no-wait
+   az group delete --name ${RESOURCE_GROUP_NAME} --yes --no-wait
    ```
 
 2. Stop local containers:
