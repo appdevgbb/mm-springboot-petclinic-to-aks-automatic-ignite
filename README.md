@@ -687,15 +687,21 @@ Apply the Kubernetes manifests to deploy the application:
 
 ```bash
 # Update the deployment manifest with your ACR login server
-sed -i "s/<acr-login-server>/$ACR_LOGIN_SERVER/g" petclinic-deployment.yaml
+sed -i "s/<acr-login-server>/$ACR_LOGIN_SERVER/g" k8s/petclinic-deployment.yaml
 
 # Apply the deployment manifest
-kubectl apply -f petclinic-deployment.yaml
+kubectl apply -f k8s/petclinic-deployment.yaml
 
 # Monitor deployment status
-kubectl get pods -w
-kubectl get services
-kubectl get deployments
+kubectl get pods,services,deployments -w
+```
+
+It might take a minute for the AKS Automatic cluster to provision new nodes for the workload so it is normal to see your pods in a `Pending` state until the new nodes are available:
+
+```bash
+NAME                                    READY   STATUS              RESTARTS   AGE
+petclinic-deployment-5f9db48c65-qpb8l   0/1     Pending             0          2m2s
+petclinic-deployment-5f9db48c65-vqb8x   0/1     Pending             0          2m2s
 ```
 
 ### Step 8: Verify Deployment and Connectivity
