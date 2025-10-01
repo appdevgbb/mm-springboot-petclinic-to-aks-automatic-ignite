@@ -680,7 +680,7 @@ kubelogin convert-kubeconfig --login azurecli
 kubectl get pods
 ```
 
-**Note:** The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Azure AD authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
+**Note:** The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
 
 ### Step 7: Deploy to AKS
 Apply the Kubernetes manifests to deploy the application:
@@ -725,14 +725,15 @@ curl http://localhost:8080/actuator/health
 Verify that the application is using passwordless authentication:
 
 ```bash
-# Check environment variables in the pod
-kubectl exec -it <pod-name> -- env | grep POSTGRES
+# Check environment variables in the pod (get first pod with label)
+POD_NAME=$(kubectl get pods -l app=petclinic -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD_NAME -- env | grep POSTGRES
 
 # Verify no password environment variables are present
-kubectl exec -it <pod-name> -- env | grep -i pass
+kubectl exec $POD_NAME -- env | grep -i pass
 
 # Check application logs for successful authentication
-kubectl logs <pod-name> | grep -i "connected\|authenticated"
+kubectl logs -l app=petclinic --tail=100 | grep -i "connected\|authenticated"
 ```
 
 **Expected Result**: Application successfully deployed to AKS with passwordless authentication to PostgreSQL using Entra ID and workload identity.
@@ -812,7 +813,7 @@ kubectl logs <pod-name> | grep -i "connected\|authenticated"
 
 To clean up all Azure resources:
 ```bash
-az group delete --name petclinic-workshop-rg --yes --no-wait
+az group delete --name ${RESOURCE_GROUP_NAME} --yes --no-wait
 ```
 
 To clean up local resources:
