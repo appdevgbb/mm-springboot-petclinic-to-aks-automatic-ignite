@@ -14,13 +14,12 @@ Simulate on‑prem execution by running [Spring Boot PetClinic](https://github.c
 ├── plan.md                             # Detailed workshop plan (temporary)
 ├── infra/                              # Infrastructure and automation
 │   ├── setup-local-lab-infra.sh        # One-command workshop setup
-│   └── setup-azure-infra.sh            # Azure resource deployment script
-├── src/                                # Symlink to ~/spring-petclinic (your forked repository)
+├── src/                                # Symlink to ~/spring-petclinic
 ├── manifests/                          # Generated Kubernetes manifests (empty initially)
 ├── config/                             # Configuration files (empty initially)
 └── images/                             # Workshop screenshots and diagrams
 
-~/spring-petclinic/                     # Your forked Spring PetClinic repository
+~/spring-petclinic/                     # Spring PetClinic repository
 ├── src/main/java/                      # Java source code (modernized during workshop)
 ├── src/main/resources/                 # Application properties and configuration
 ├── pom.xml                             # Maven dependencies
@@ -38,163 +37,50 @@ Ensure you have the following tools installed and available:
 - [kubectl](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli#install-the-azure-cli-and-kubernetes-cli) (available via Azure AKS client tools).
 - A terminal with `bash` (e.g.: Windows Terminal with WSL, macOS or Linux).
 
-## Module 1: Deploy Azure Infrastructure
-
-In this module, you will create all required Azure resources using Bicep templates and learn about Azure resource management, PostgreSQL Flexible Server, AKS Automatic, and workload identity concepts.
-
-**What You'll Do:** Deploy Azure infrastructure using Bicep templates to support the Petclinic application.
-
-**What You'll Learn:** Azure Bicep deployment, AKS Automatic, PostgreSQL Flexible Server with Entra ID, and Service Linkers.
-
-AKS Automatic is a great landing zone to migrate and modernize legacy workloads because it simplifies by default: AKS manages node provisioning and scaling, applies hardened security baselines, enables Azure RBAC and workload identity, and integrates application routing (managed NGINX) and observability out of the box letting teams focus on the app, not managing the cluster.
-
-Modernizing legacy workloads pairs naturally with Azure PaaS: replace the simulated on‑prem PostgreSQL with Azure Database for PostgreSQL Flexible Server using Microsoft Entra authentication for passwordless access from AKS, and use AKS Service Connector to generate the Kubernetes wiring and secrets that connect and authenticate the app to Postgres automatically.
-
-See the AKS Automatic overview and engineering deep dive for details, and service docs for Entra-enabled Postgres and Service Connector: [AKS Automatic intro](https://learn.microsoft.com/en-us/azure/aks/intro-aks-automatic), [AKS Automatic engineering blog](https://blog.aks.azure.com/2024/05/22/aks-automatic).
-
-**Detailed Steps:**
-
-### Step 1: Open Terminal in VS Code
-
-If you haven't already, open a new terminal in VS Code:
-- Press ``Ctrl+` `` (backtick) on Windows/Linux or ``Cmd+` `` on macOS.
-- Or go to **Terminal** → **New Terminal** in the menu.
-- Or use the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and search for "Terminal: Create New Terminal".
-
-### Step 2: Navigate to Infrastructure Directory
-```bash
-cd infra
-```
-
-### Step 3: Verify Prerequisites
-
-```bash
-# Check Azure CLI is installed and you're logged in
-az account show
-
-# If not logged in, run:
-az login
-```
-
-### Step 4: Review Bicep Configuration
-
-```bash
-# View the main Bicep template
-cat main.bicep
-
-# View the parameters file
-cat parameters.json
-
-# View the resources template
-cat resources.bicep
-```
-
-### Step 5: Deploy Azure Infrastructure
-
-```bash
-# Make the deployment script executable
-chmod +x setup-azure-infra.sh
-
-# Run the deployment in the background (this will take 30 minutes)
-./setup-azure-infra.sh > deployment.log 2>&1 &
-```
-
-To deploy the Azure infrastructure using the provided ARM template:
-
-```bash
-# Configuration variables
-RESOURCE_GROUP_NAME="petclinic-workshop-rg"
-LOCATION="Central US"
-DEPLOYMENT_NAME="aks-arm-deployment-$(date +%Y%m%d-%H%M%S)"
-PARAMETERS_FILE="parameters.json"
-
-# Get current user info
-CURRENT_USER_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || echo "")
-CURRENT_USER_UPN=$(az ad signed-in-user show --query userPrincipalName -o tsv 2>/dev/null || echo "")
-
-# Deploy using variables
-az deployment sub create \
-  --location "$LOCATION" \
-  --name "$DEPLOYMENT_NAME" \
-  --template-file main.json \
-  --parameters @$PARAMETERS_FILE \
-  --parameters resourceGroupName="$RESOURCE_GROUP_NAME" \
-  --parameters location="$LOCATION" \
-  --parameters azureADObjectId="$CURRENT_USER_ID" \
-  --parameters azureADUserPrincipalName="$CURRENT_USER_UPN" \
-  --parameters userAssignedIdentityName="petclinic-app-uami" \
-  --parameters acrName="petclinicacr" \
-  --output table > deployment.log 2>&1 &
-```
-
-> **Note:** The Azure infrastructure deployment is now running in the background and will take approximately 30 minutes to complete. You can follow the deployment progress by looking at the `deployment.log` file (e.g.: `tail deployment.log`).
->
-> While it's deploying, you will continue with Module 2 to set up the PetClinic application locally and begin the modernization work.
-
-**What this script creates in Azure:**
-- Resource group: `petclinic-workshop-rg`.
-- AKS Automatic cluster with system-assigned managed identity.
-- Azure PostgreSQL Flexible Server with Entra ID authentication.
-- Log Analytics Workspace for AKS monitoring.
-- Service Connectors for secure AKS to Postgres connection and authentication using AKS workload identity.
-- User Assigned Managed Identity for application authentication.
 
 ---
 
-## Module 2: Setup Petclinic locally and test
+## Module 1: Set Up and Test PetClinic Locally
 
-**What You'll Do:** Fork the PetClinic repository, run the automated local lab setup, start the application against a local PostgreSQL instance, explore core app features in the browser, and open the project in VS Code to prepare for modernization.
-**What You'll Learn:** How to prepare a local development environment, run Spring Boot with Maven using externalized Postgres configuration, validate application functionality, and navigate the PetClinic codebase in VS Code.
+**What You'll Do:** Set up a complete local development environment with the PetClinic application running against PostgreSQL, then explore the application in your browser.
 
-### Step 1: Fork the Spring PetClinic Repository
-Before starting the workshop, you need to fork the Spring PetClinic repository to your own GitHub account:
+**What You'll Learn:** How to quickly deploy a local Spring Boot development environment with Docker-based PostgreSQL and verify application functionality.
 
-1. **Navigate to the Spring PetClinic repository**: https://github.com/spring-projects/spring-petclinic
-2. **Click the "Fork" button** in the top-right corner.
-3. **Select your GitHub account** as the destination for the fork.
-4. **Wait for the fork to complete** (usually takes a few seconds).
-5. **Note your fork URL**: It will be `https://github.com/YOUR_USERNAME/spring-petclinic`
+### Step 1: Run the Automated Setup Script
 
-> **Important**: You must fork the repository to your own GitHub account because the workshop will make changes to the code that you'll want to commit and push to your fork.
+The `setup-local-lab-infra.sh` script performs a complete one-command setup:
 
-### Step 2: Run the Automated Setup Script
-Run the automated setup script with your fork URL:
-   ```bash
-   chmod +x setup-local-lab-infra.sh
-   ./setup-local-lab-infra.sh https://github.com/YOUR_USERNAME/spring-petclinic
-   ```
- 
-### Step 3: Test the Spring Petclinic Application Locally
-Congratulations, your copy of the Spring Petclinic application should be running locally! You can test it by opening a browser to `http://localhost:8080`. 
+1. **Clones the repository** to `~/spring-petclinic` and creates a symlink for easy access
+2. **Launches PostgreSQL** in a Docker container with pre-configured credentials
+3. **Builds and starts** the Spring Boot application connected to the database
 
-If you need to run this manually:
+Execute the setup script from the `infra` directory:
 
-   ```bash
-   # Check if PostgreSQL container is running
-   docker ps | grep petclinic-postgres
-   
-   # Test the application with all configuration
-   cd src
-   mvn spring-boot:run -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none"
-   cd ..
-   
-   # Wait for application to fully start
-   echo "⏳ Waiting 30 seconds for application to start..."
-   sleep 30
+```bash
+cd infra
+chmod +x setup-local-lab-infra.sh
+./setup-local-lab-infra.sh
+```
 
-   # Open in browser for manual verification
-   # http://localhost:8080
+The script will complete in approximately 1-2 minutes. When finished, your PetClinic application will be running at **http://localhost:8080**.
 
-   ```
+### Step 2: Verify the Application
 
-**💡 Explore the PetClinic Application:**
+Open your browser and navigate to `http://localhost:8080` to confirm the application is running. 
+
+*** Explore the PetClinic Application:**
+
 Once the application is running in your browser, take some time to explore the functionality:
+
 - **Find Owners**: Go to "FIND OWNERS" → leave the "Last Name" field blank → click "Find Owner" to see all 10 owners.
+
 - **View Owner Details**: Click on an owner like "Betty Davis" to see their information and pets.
+
 - **Edit Pet Information**: From an owner's page, click "Edit Pet" to see how pet details are managed.
+
 - **Review Veterinarians**: Navigate to "VETERINARIANS" to see the 6 vets with their specialties (radiology, surgery, dentistry).
 
-### Step 4: Open the Project in VS Code
+### Step 3: Open the Project in VS Code
 
 Next, let's open the Petclinic project in a new instance of VS Code and begin our modernization work. In VS Code, open a terminal and run the following command to launch a new VS Code instance into the `spring-petclinic` source directory:
    
@@ -204,7 +90,7 @@ Next, let's open the Petclinic project in a new instance of VS Code and begin ou
 
 ---
 
-## Module 3: Application Modernization
+## Module 2: Application Modernization
 
 **What You'll Do:** Use GitHub Copilot app modernization to assess, remediate, and modernize the Spring Boot application in preparation to migrate the workload to AKS Automatic.
 
@@ -229,6 +115,7 @@ Scroll down in the GitHub Copilot chat to see the Assessment tool configuration 
 The tool offers several analysis targets and modes:
 
 **Analysis Targets:**
+
 - `azure-aks` - Selects AppCAT rules relevant to moving pre-containerized workloads to AKS.
 - `openjdk17` - Identifies Java 17 upgrade opportunities and compatibility issues.
 - `cloud-readiness` - General pre-container workload optimization recommendations.
@@ -444,7 +331,7 @@ All changes were automatically committed to a new branch (`appmod/java-managed-i
 
 ---
 
-## Module 4: Generate Containerization Assets
+## Module 3: Generate Containerization Assets
 
 **What You'll Do:** Use AI-powered containerization tools to create Docker and Kubernetes manifests for the modernized Spring Boot application.
 
@@ -737,321 +624,5 @@ kubectl logs -l app=petclinic --tail=100 | grep -i "connected\|authenticated"
 ```
 
 **Expected Result**: Application successfully deployed to AKS with passwordless authentication to PostgreSQL using Entra ID and workload identity.
-
----
-
-### Module 6: Cleanup Resources
-**What You'll Do:** Remove all Azure resources and clean up local environment
-**What You'll Learn:** Best practices for resource cleanup and cost management
-
-**Detailed Steps:**
-1. Remove Azure resource group:
-   ```bash
-   # Delete entire resource group (this will clean up all resources)
-   az group delete --name ${RESOURCE_GROUP_NAME} --yes --no-wait
-   ```
-
-2. Stop local containers:
-   ```bash
-   # Stop and remove local PostgreSQL container
-   docker stop petclinic-postgres
-   docker rm petclinic-postgres
-   ```
-
-3. Clean up local files:
-   ```bash
-   # Stop local application (if still running)
-   pkill -f "spring-boot:run"
-   ```
-
-4. Verify cleanup completion:
-   ```bash
-   # Check if containers are stopped
-   docker ps | grep petclinic
-   
-   # Check if application is stopped
-   curl -s http://localhost:8080 || echo "Application stopped"
-   ```
-
-## Testing & Validation
-
-### Local Application Test
-- Application accessible at http://localhost:8080.
-- Database connection working (check logs for Hibernate messages).
-- Basic PetClinic functionality working.
-
-### Azure Infrastructure Test
-- PostgreSQL server accessible from AKS.
-- AKS cluster running with workload identity enabled.
-- Service connector configured between AKS and PostgreSQL.
-
-### Deployed Application Test
-- Application pods running successfully.
-- Service accessible via kubectl port-forward.
-- Application connecting to Azure PostgreSQL.
-
-
-## Workshop Deliverables
-- Locally running PetClinic with PostgreSQL container.
-- Modernized codebase using GitHub Copilot.
-- Azure PostgreSQL with Entra ID authentication.
-- AKS Automatic cluster with workload identity.
-- Containerized application deployed and accessible.
-- Secure service connector between AKS and PostgreSQL.
-
-## Key Technologies
-
-- **Spring Boot PetClinic**: The application to modernize.
-- **Azure PostgreSQL Flexible Server**: Cloud database with Entra ID auth.
-- **AKS Automatic**: Managed Kubernetes with automated deployments.
-- **[GitHub Copilot Application Modernization for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-upgrade)**: AI-powered Java application modernization.
-- **Containerization Assist MCP Server**: AI-powered Docker and K8s manifest generation.
-- **Workload Identity**: Passwordless authentication between AKS and Azure services.
-- **Service Connector**: Secure connection between AKS and PostgreSQL.
-
-## Cleanup
-
-To clean up all Azure resources:
-```bash
-az group delete --name ${RESOURCE_GROUP_NAME} --yes --no-wait
-```
-
-To clean up local resources:
-```bash
-docker stop petclinic-postgres && docker rm petclinic-postgres
-```
-
-## Resources
-
-- [Spring Boot PetClinic](https://github.com/spring-projects/spring-petclinic)
-- [GitHub Copilot Application Modernization for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-upgrade)
-- [Containerization Assist MCP Server](https://github.com/Azure/containerization-assist)
-- [AKS Automatic Documentation](https://learn.microsoft.com/en-us/azure/aks/automatic/)
-- [Azure PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/)
-- [Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
-
-## Support
-
-If you encounter issues during the workshop:
-1. Review the workshop steps and verify prerequisites
-2. Verify all prerequisites are installed and working
-3. Check Azure portal for resource health and diagnostics
-4. Use `kubectl logs` to debug application issues
-
-## Notes
-
-- This workshop is designed for a 90-minute session.
-- All Azure resources use fixed naming conventions.
-- PostgreSQL server names include a random 6-character suffix.
-- The workshop focuses on the migration experience, not troubleshooting.
-- Containerization Assist MCP Server will generate the actual Docker and K8s files.
-
-## Workshop Notes & Observations
-- **What worked well:**
-- **Challenges encountered:**
-- **Key learnings:**
-- **Next steps to explore:**
-
----
-
-**Workshop completed on:** ___________  
-**Total time taken:** ___________  
-**Overall experience:** 
-
----
-
-## Known Issues
-
-### Service Linker Deployment Conflicts (409 Errors)
-
-**Issue**: When redeploying the Bicep infrastructure, you may encounter 409 Conflict errors related to Service Linker resources:
-
-```
-"Another operation on this or dependent resource is in progress"
-"Update failed for this resource, as there is a conflicting operation in progress"
-```
-
-**Root Cause**: Azure Service Linker resources have known idempotency issues in Bicep deployments. The Service Linker tries to update instead of recognizing it's already in the desired state.
-
-**Impact**: 
-- **Core infrastructure deploys successfully** (AKS, ACR, PostgreSQL).
-- **ACR role assignments work correctly**.
-- **Service Linkers may fail on redeployment**.
-
-**Workarounds**:
-
-#### Option 1: Conditional Service Linker Creation (Recommended)
-```bicep
-// Check if Service Linker already exists
-resource existingPostgresLinker 'Microsoft.ServiceLinker/linkers@2022-05-01' existing = {
-  name: 'postgres-linker'
-  scope: aksCluster
-}
-
-// Only create if it doesn't exist
-resource postgresServiceLinker 'Microsoft.ServiceLinker/linkers@2022-05-01' = if (!existingPostgresLinker) {
-  name: 'postgres-linker'
-  scope: aksCluster
-  properties: {
-    // ... Service Linker configuration
-  }
-}
-```
-
-#### Option 2: Separate Service Linker Deployment
-1. Deploy core infrastructure first (AKS, ACR, PostgreSQL).
-2. Deploy Service Linkers in a separate, subsequent deployment.
-3. This avoids 409 conflicts during initial deployment.
-
-#### Option 3: Manual Service Linker Creation
-1. Deploy infrastructure with Bicep
-2. Create Service Linkers manually using Azure CLI:
-   ```bash
-   az serviceconnector postgres create \
-     --name postgres-linker \
-     --resource-group <resource-group> \
-     --connection postgres \
-     --target-resource-group <resource-group> \
-     --server <postgres-server> \
-     --database <database-name>
-   ```
-
-#### Option 4: Use What-If Before Deployment
-```bash
-az deployment sub what-if \
-  --location "West US 3" \
-  --template-file main.bicep \
-  --parameters @parameters.json
-```
-
-#### Option 5: Wait and Retry (Temporary Fix)
-Based on community reports, the 409 conflict often resolves itself after waiting 30-60 minutes:
-1. Wait for any ongoing operations to complete
-2. Check Azure Activity Log for stuck operations
-3. Retry the deployment after the waiting period
-
-#### Option 6: Use Batch Size Decorator (Recommended for Service Linkers)
-Based on [GitHub PR #1771](https://github.com/Azure/bicep-registry-modules/pull/1771), add batch size decorators to Service Linker resources:
-```bicep
-@batchSize(1)
-resource postgresServiceLinker 'Microsoft.ServiceLinker/linkers@2022-05-01' = {
-  name: 'postgres-linker'
-  scope: aksCluster
-  properties: {
-    // ... Service Linker configuration
-  }
-}
-```
-
-#### Option 7: Use Deployment Mode "Complete" (Use with Caution)
-```bash
-az deployment sub create \
-  --location "West US 3" \
-  --template-file main.bicep \
-  --parameters @parameters.json \
-  --mode Complete
-```
-**Warning**: Complete mode will delete resources not defined in the template. Only use in isolated environments.
-
-**References**:
-- [Azure Bicep Conditional Deployments](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/conditional-resource-deployment)
-- [Azure Bicep What-If Preview](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if)
-- [Stack Overflow: Azure Bicep Deployment Failed (Conflict) Another Operation](https://stackoverflow.com/questions/72621266/azure-bicep-deployment-failed-conflict-another-operation-on-this-or-dependen)
-- [GitHub PR: Fix Set subnet batch size decorator for 409 conflicts](https://github.com/Azure/bicep-registry-modules/pull/1771) - **Direct solution for similar issues**
-- [GitHub Issue: AVM Module AnotherOperationInProgress Error](https://github.com/Azure/bicep-registry-modules/issues/1831)
-- [Microsoft Q&A: Azure DevOps App Service 409 Conflict](https://learn.microsoft.com/en-us/answers/questions/1307899/how-to-fix-azure-devops-app-service-deployment-alw)
-
-**Note**: This is a known Azure limitation and doesn't prevent the core functionality from working. The infrastructure is ready for application deployment even if Service Linkers fail.
-
-### Azure Policy (Gatekeeper) Service Connector Conflicts
-
-**Issue**: Service Connector creation may fail with Azure Policy validation errors, even on AKS Automatic clusters:
-
-```
-admission webhook "validation.gatekeeper.sh" denied the request: 
-Container <serviceconnector-operator> has no <livenessProbe>. Required probes: ["readinessProbe", "livenessProbe"]
-```
-
-**Root Cause**: Azure Policy (Gatekeeper) enforces that all containers must have health probes. Service Connector automatically installs a Kubernetes extension (`sc-extension`) that includes an operator pod, but this pod may not meet Azure Policy requirements for health probes.
-
-**How Service Connector Works**:
-- **Automatic Extension Installation**: Service Connector installs `sc-extension` on first connection
-- **Kubernetes Resources Created**: Automatically creates secrets and service accounts
-- **Workload Identity Setup**: Configures workload identity and OIDC issuer
-- **Security Configuration**: Sets up role assignments and firewall rules
-- **Azure Policy Can Block**: Strict policies may prevent the extension installation
-
-**Impact**:
-- **Core infrastructure deploys successfully** (AKS, ACR, PostgreSQL)
-- **Managed identity is configured** and ready for workload identity
-- **AKS features work normally** (scaling, monitoring, etc.)
-- **Service Connector extension fails to install** due to Azure Policy
-- **Manual Kubernetes resource creation required** for database connections
-
-**Workarounds**:
-
-#### Option 1: Manual Connection Configuration (Recommended)
-When Service Connector fails, manually create the same Kubernetes resources it would have created:
-
-```bash
-# Create Kubernetes secret with connection info
-kubectl create secret generic postgres-secret \
-  --from-literal=POSTGRES_HOST="your-postgres-server.postgres.database.azure.com" \
-  --from-literal=POSTGRES_DB="petclinic" \
-  --from-literal=AZURE_CLIENT_ID="your-managed-identity-client-id"
-
-# Create service account with workload identity annotation
-kubectl create serviceaccount petclinic-sa
-kubectl annotate serviceaccount petclinic-sa \
-  azure.workload.identity/client-id="your-managed-identity-client-id"
-
-# Use in your deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: petclinic
-spec:
-  template:
-    spec:
-      serviceAccountName: petclinic-sa
-      containers:
-      - name: petclinic
-        env:
-        - name: POSTGRES_HOST
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_HOST
-```
-
-#### Option 2: Retry Service Connectors After Policy Resolution
-Service Connectors may succeed on retry after resolving Azure Policy issues:
-
-```bash
-# Wait a few minutes after cluster creation, then retry
-az aks connection create postgres-flexible \
-  --resource-group petclinic-workshop-rg \
-  --name your-aks-cluster-name \
-  --connection pg \
-  --target-id your-postgres-database-id \
-  --workload-identity your-managed-identity-resource-id \
-  --yes
-```
-
-#### Option 3: Disable Problematic Azure Policy (If Permitted)
-If you have permissions to modify Azure Policy assignments:
-
-1. Identify the policy assignment blocking Service Connectors
-2. Add an exclusion for the `sc-*` namespaces used by Service Connectors
-3. Retry Service Connector creation
-
-#### Option 4: Use Alternative Authentication
-Configure PostgreSQL to use Azure AD authentication directly in your application code without Service Connectors.
-
-**References**:
-- [Azure Workload Identity Documentation](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
-- [PostgreSQL Azure AD Authentication](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication)
-
----
 
 **Happy modernizing!**
