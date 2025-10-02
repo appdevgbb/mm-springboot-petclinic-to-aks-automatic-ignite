@@ -1,4 +1,4 @@
-## Module 1: Deploy Azure Infrastructure
+## Deploying the solution to Azure
 
 In this module, you will create all required Azure resources using Bicep templates and learn about Azure resource management, PostgreSQL Flexible Server, AKS Automatic, and workload identity concepts.
 
