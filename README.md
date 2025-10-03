@@ -351,7 +351,7 @@ code src/
 Install the Containerization Assist MCP Server globally. Open a terminal and run:
 
 ```bash
-npm install -g @thgamble/containerization-assist-mcp
+npm install -g @thgamble/containerization-assist-mcp@latest
 ```
 
 Configure VS Code to use the MCP server. Add to your VS Code settings or create `.vscode/mcp.json` in your project:
