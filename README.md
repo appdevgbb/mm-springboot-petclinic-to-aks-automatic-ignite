@@ -37,8 +37,7 @@ Ensure you have the following tools installed and available:
 - [kubectl](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli#install-the-azure-cli-and-kubernetes-cli) (available via Azure AKS client tools).
 - A terminal with `bash` (e.g.: Windows Terminal with WSL, macOS or Linux).
 
-
----
+===
 
 ## Module 1: Set Up and Test PetClinic Locally
 
@@ -88,7 +87,7 @@ Next, let's open the Petclinic project in a new instance of VS Code and begin ou
   code ~/spring-petclinic
 ```
 
----
+===
 
 ## Module 2: Application Modernization
 
@@ -329,7 +328,7 @@ The migration process updated the following configuration files:
 **Version Control Integration:**
 All changes were automatically committed to a new branch (`appmod/java-managed-identity-spring/mi-postgresql-spring-[timestamp]`) with supporting documentation including migration plan (`plan.md`), progress tracking (`progress.md`), and final summary (`summary.md`) files for complete visibility into the migration process and outcomes.
 
----
+===
 
 ## Module 3: Generate Containerization Assets
 
@@ -412,7 +411,7 @@ The Containerization Assist MCP Server will analyze your repository and generate
 
 **Expected Result**: Production-ready containerization assets in the `k8s/` directory.
 
----
+===
 
 ### Module 5: Deploy to AKS
 
