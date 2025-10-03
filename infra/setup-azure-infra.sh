@@ -154,18 +154,7 @@ check_service_connector_exists() {
 # we need this otherwise the service connector creation fails due to policy restrictions
 azure_policy_audit() {
     echo "Applying Azure Policy audit mode to AKS cluster..."
-    az policy assignment update   --name "aks-deployment-safeguards-policy-assignment"   --scope "/subscriptions/6edaa0d4-86e4-431f-a3e2-d027a34f03c9/resourcegroups/petclinic-workshop-rg/providers/microsoft.containerservice/managedclusters/aks-petclinic-py2t5evhiqdr4"   --params '{
-        "effect": {"value": "Audit"},
-        "allowedContainerImagesRegex": {"value": ".*"},
-        "allowedGroups": {"value": ["system:node"]},
-        "allowedUsers": {"value": ["nodeclient", "system:serviceaccount:kube-system:aci-connector-linux", "system:serviceaccount:kube-system:node-controller", "acsService", "aksService", "system:serviceaccount:kube-system:cloud-node-manager"]},
-        "cpuLimit": {"value": "2"},
-        "excludedNamespaces": {"value": ["kube-system", "calico-system", "tigera-system", "gatekeeper-system"]},
-        "labels": {"value": ["kubernetes.azure.com"]},
-        "memoryLimit": {"value": "1Gi"},
-        "reservedTaints": {"value": ["CriticalAddonsOnly"]},
-        "warn": {"value": true}
-    }'
+    az policy assignment delete --name "aks-deployment-safeguards-policy-assignment" --scope "$AKS_CLUSTER_ID"
 }
 
 # Function to create PostgreSQL service connector
