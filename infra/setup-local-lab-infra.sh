@@ -105,7 +105,7 @@ mvn clean compile
 echo "Build successful!"
 
 echo "Starting application (this will run in background)..."
-cd ${HOME}/src/
+cd ${HOME}/sprint-petclinic
 nohup mvn spring-boot:run -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none" > ../app.log 2>&1 &
 APP_PID=$!
 
