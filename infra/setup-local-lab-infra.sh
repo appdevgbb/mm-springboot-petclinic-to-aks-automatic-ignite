@@ -105,7 +105,7 @@ mvn clean compile
 echo "Build successful!"
 
 echo "Starting application (this will run in background)..."
-cd src/
+cd ${HOME}/src/
 nohup mvn spring-boot:run -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none" > ../app.log 2>&1 &
 APP_PID=$!
 
@@ -133,7 +133,7 @@ echo "   3. Use GitHub Copilot App Modernization to upgrade the codebase"
 echo "   4. Use Containerization Assist to generate Docker and K8s manifests"
 echo "   5. Deploy to AKS and test the modernized application"
 echo ""
-echo "Note: You're working with your forked repository at: $FORK_URL"
+echo "Note: You're working with your cloned repository at: $FORK_URL"
 echo "   Your code is located at: ~/spring-petclinic/"
 echo "   A symlink is available at: src/ (points to ~/spring-petclinic/)"
 echo "   Any changes you make can be committed and pushed to your fork."
