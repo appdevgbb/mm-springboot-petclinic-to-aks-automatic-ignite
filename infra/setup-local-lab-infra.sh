@@ -56,7 +56,6 @@ echo ""
 echo "Changing into the src directory"
 cd ${HOME}/spring-petclinic
 echo "Current directory: $(pwd)"
-#git checkout 30aab0ae764ad845b5eedd76028756835fec771f
 
 # Start PostgreSQL container
 echo "Starting PostgreSQL container..."
@@ -111,14 +110,29 @@ cd ${HOME}/spring-petclinic/
 nohup mvn spring-boot:run -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none" > ../app.log 2>&1 < /dev/null &
 APP_PID=$!
 
-echo "Waiting for application to start..."
-sleep 30
+echo "Waiting for Spring Boot application to start (this may take 30-60 seconds)..."
+echo "The application is initializing the database and loading Spring components..."
 
-# Test the application
-if curl -s http://localhost:8080 > /dev/null; then
+# Wait with progress indicators
+for i in {1..6}; do
+    echo "  Checking startup progress... ($((i*5)) seconds elapsed)"
+    sleep 5
+    
+    # Check if app is ready after 15 seconds
+    if [ $i -ge 3 ] && curl -s http://localhost:8080 > /dev/null 2>&1; then
+        echo "Application started successfully!"
+        break
+    fi
+done
+
+# Final verification
+if curl -s http://localhost:8080 > /dev/null 2>&1; then
     echo "Application is running successfully at http://localhost:8080"
+    echo "   You can now access the PetClinic web interface in your browser"
 else
-    echo "Application failed to start. Check logs in app.log"
+    echo "Application failed to start after waiting. Checking logs..."
+    echo "   Last few lines from app.log:"
+    tail -10 ../app.log 2>/dev/null || echo "   No log file found"
     kill $APP_PID 2>/dev/null || true
     exit 1
 fi
