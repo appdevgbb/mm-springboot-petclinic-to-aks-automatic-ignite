@@ -18,3 +18,7 @@ app.log
 !*.bicepparam
 .DS_Store
 infra/deployment.log
+node_modules
+package-lock.json
+.gitignore
+package.json

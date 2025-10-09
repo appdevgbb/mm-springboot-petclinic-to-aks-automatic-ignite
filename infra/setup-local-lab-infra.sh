@@ -58,11 +58,6 @@ cd ${HOME}/spring-petclinic
 echo "Current directory: $(pwd)"
 #git checkout 30aab0ae764ad845b5eedd76028756835fec771f
 
-# Reinitialize git to avoid pushing to the original repo
-echo "Reinitializing git repository..."
-rm -rf .git
-git init
-
 # Start PostgreSQL container
 echo "Starting PostgreSQL container..."
 if docker ps -a --format "table {{.Names}}" | grep -q "^petclinic-postgres$"; then
@@ -112,7 +107,7 @@ mvn clean compile
 echo "Build successful!"
 
 echo "Starting application (this will run in background)..."
-cd ${HOME}/spring-petclinic/src
+cd ${HOME}/spring-petclinic/
 nohup mvn spring-boot:run -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none" > ../app.log 2>&1 < /dev/null &
 APP_PID=$!
 
@@ -128,7 +123,11 @@ else
     exit 1
 fi
 
-cd ..
+# Reinitialize git to avoid pushing to the original repo
+echo "Reinitializing git repository..."
+rm -rf .git
+git init
+
 echo ""
 
 echo "Workshop environment setup completed!"
