@@ -170,6 +170,10 @@ In order to use the GitHub Copilot, you will need to log in using the provided G
 
 1. Sign in with the GitHub account credentials provided in your lab environment.
 
+> [!hint] Your credentials can be found in the **Resources** tab
+!IMAGE[resources.png](instructions310381/resources.png)
+
+
 ### Log into VS Code with GitHub account
 
 After you have logged in, return to VS Code, click the account icon in the bottom right corner, then:
@@ -188,6 +192,15 @@ After you have logged in, return to VS Code, click the account icon in the botto
 
 1. Click the **Connect** button, then click **Authorize Visual-Studio-Code** to complete the authorization.
 
+	!IMAGE[authorized-github.png](instructions310381/authorized-github.png)
+
+1. Next, select to always allow vscode.dev to open links
+
+	!IMAGE[allow-vs-code.png](instructions310381/allow-vs-code.png)
+
+1. Now back in vs code, go to the GitHub Copilot chat window and change the model to **Claude Sonet 3.7** or later
+
+	!IMAGE[github-claude.png](instructions310381/github-claude.png)
 ===
 
 ### Execute the Assessment
@@ -198,8 +211,27 @@ Now that you have GitHub Copilot setup, you can use the assessment tool to analy
 
 	!IMAGE[module2-step2-extension-interface.png](instructions310381/module2-step2-extension-interface.png)
 
-1. Review Code Assessment Configuration Options
-Scroll down in the GitHub Copilot chat to see the Assessment tool configuration represented as JSON. 
+1. Allow the GitHub Copilot app modernization to sign in to GitHub 
+	!IMAGE[ghcp-allow-signin.png](instructions310381/ghcp-allow-signin.png)
+
+1. Authorize your user to sign in
+
+	!IMAGE[gh-auth-user.png](instructions310381/gh-auth-user.png)
+
+1. And finally, authorized it again on this screen
+
+	!IMAGE[gh-auth-screen.png](instructions310381/gh-auth-screen.png)
+
+1. The assessment will start now. Notice that GitHub will install the AppCAT CLI for Java. This might take a few minutes
+
+	!IMAGE[appcat-install.png](instructions310381/appcat-install.png)
+
+> [!hint] You can follow the progress of the upgrade by looking at the Terminal in vscode
+!IMAGE[assessment-rules.png](instructions310381/assessment-rules.png)
+
+Also note that you might be prompted to allow access to the language models provided by GitHub Copilot Chat. Click on **Allow**
+
+!IMAGE[ghcp-allow-llm.png](instructions310381/ghcp-allow-llm.png)
 
 ### Overview of the Assessment
 
@@ -333,9 +365,6 @@ The App Modernization tool has analyzed your Spring Boot application and generat
 
 To Begin Migration type **"Continue"** in the GitHub Agent Chat to start the code refactoring.
 
-
-> [!note] Although the GitHub Copilot App Modernization MCP will establish a version control, creating a new branch for the migration, we will not be using that feature during this lab.
-
 ### Review Migration Process and Progress Tracking
 
 Once you confirm with **"Continue"**, the migration tool begins implementing changes using a structured, two-phase approach designed to ensure traceability and commit changes to a new dedicated code branch for changes to enable rollback if needed.
@@ -397,6 +426,10 @@ The migration process updated the following configuration files:
 
 - Test configurations - Updated to work with the new authentication method
 
+> [!hint] Througout this lab, the GitHub Copilot App Modernization extension will create, edit and change various files. The Agent will give you an option to _Keep_ or _Undo_ these changes which will be saved into a new Branch, preserving your original files in case you need to rollback any changes.
+!IMAGE[keep-or-undo.png](instructions310381/keep-or-undo.png)
+
+
 ### Validation and Fix Iteration Loop
 
 After implementing the migration changes, the App Modernization tool automatically validates the results through a comprehensive testing process to ensure the migration changes are secure, functional, and consistent.
@@ -411,6 +444,10 @@ After implementing the migration changes, the App Modernization tool automatical
 | 2 | **Build Validation** | Verifies the application compiles and builds successfully after migration changes.
 | 3 | **Consistency Validation** | Ensures all configuration files are properly updated and consistent.
 | 4 | **Test Validation** | Executes application tests to verify functionality remains intact.
+
+During these stages, you might be prompted to allow the **GitHub Copilot app modernization** extension to access GitHub. Allow it and select your user account when asked.
+
+!IMAGE[allow-ghcp-cve.png](instructions310381/allow-ghcp-cve.png)
 
 **Automated Error Detection and Resolution:**
 
@@ -440,33 +477,33 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ### Install Containerization MCP Server
 
-For the next steps we will use the [Containerization Assist MCP Server](https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme). Open a new instance of VS Code and navigate to the PetClinic project:
+For the next steps we will use the [Containerization Assist MCP Server](https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme). Open a new terminal in VS Code:
 
-1. Install the Containerization Assist MCP Server globally. Open a terminal and run:
+1. Open a terminal and run:
 
 	```bash
-	npm install -g containerization-assist-mcp
-
+	cd ~/spring-petclinic
+	npm install containerization-assist-mcp
 	```
 
-1. Configure VS Code to use the MCP server. Add to your VS Code settings or create `.vscode/mcp.json` in your project:
+1. Configure VS Code to use the MCP server. Create `.vscode/mcp.json` inside of the `spring-petclinic` directory:
 
 	```json
-	{
-  	"servers": {
+	{  
+	  "servers": {
 	    "containerization-assist": {
-    	  "command": "containerization-assist-mcp",
-      	"args": ["start"],
-      	"env": {
-        	"DOCKER_SOCKET": "/var/run/docker.sock",
-        	"LOG_LEVEL": "info"
-      	}
-    	}
-  	}
+		  "command": "./node_modules/.bin/containerization-assist-mcp",
+		  "args": ["start"],
+		  "env": {
+			"DOCKER_SOCKET": "/var/run/docker.sock",
+			"LOG_LEVEL": "info"
+		  }
+		}
+	  }
 	}
 	```
-
-1. Restart VS Code to enable the MCP server in GitHub Copilot.
+    
+1. Restart VS Code to enable the Containerization Assist MCP  server in GitHub Copilot.
 
 **Validation:** After restarting VS Code, you should see the Containerization Assist MCP Server available in the Configure Tools dialog:
 
@@ -496,6 +533,10 @@ Also include:
 - A LoadBalancer Service exposing port 80 (targeting container port 8080)
 - Keep envFrom with secretRef to make all secret keys available in the pod
 ```
+
+> [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace
+!IMAGE[ca-mcp-allow.png](instructions310381/ca-mcp-allow.png)
+
 
 The Containerization Assist MCP Server will analyze your repository and generate:
 
