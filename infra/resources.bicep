@@ -22,6 +22,8 @@ param userAssignedIdentityName string
 @description('Name of the Azure Container Registry')
 param acrName string
 
+@description('Name of the Azure Policy Assignment to update to Audit mode')
+param policyAssignmentName string
 
 @description('Tags to apply to all resources')
 param tags object
@@ -207,6 +209,9 @@ resource aksRbacClusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignme
     principalType: 'User'
   }
 }
+
+// Note: Policy assignment update is handled in the bash deployment script (setup-azure-infra.sh)
+// to avoid Azure CLI deployment bugs with deployment script resources
 
 // Outputs - Essential information for Spring PetClinic deployment
 output aksClusterName string = aksCluster.name
