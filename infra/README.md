@@ -59,34 +59,44 @@ petclinic-workshop-rg/
 If you prefer to deploy manually:
 
 ```bash
+RAND=$RANDOM
+export RAND
+echo "Random resource identifier will be: ${RAND}"
+
+LOCATION=swedencentral
+RESOURCE_GROUP=rg-petclinic$RAND
+
 # Deploy the infrastructure (creates resource group and all resources)
-az deployment sub create \
-  --location "westus3" \
-  --name aks-bicep-deployment \
-  --template-file main.bicep \
-  --parameters @parameters.json \
-  --parameters resourceGroupName="petclinic-workshop-rg" \
-  --parameters location="westus3"
+az group create \
+--name $RESOURCE_GROUP \
+--location $LOCATION
+
+az deployment group create \
+--resource-group $RESOURCE_GROUP \
+--name petclinic-deployment-$RAND \
+--template-file main.bicep \
+--parameters nameSuffix=$RAND deployAzureRBACForCurrentUser=true azureADUserPrincipalName=$(az ad signed-in-user show --query mail -o tsv) azureADObjectId=$(az ad signed-in-user show --query id -o tsv)
 ```
 
 ## Configuration
 
 ### Parameters
 
-| Parameter | Description | Default | Validation |
-|-----------|-------------|---------|------------|
-| `resourceGroupName` | Resource group name | `petclinic-workshop-rg` | 1-90 chars |
-| `location` | Azure region | `westus3` | Valid region |
-| `aksClusterName` | AKS cluster name | `petclinic-workshop-aks-{unique}` | 1-63 chars |
-| `postgresServerName` | PostgreSQL server name | `petclinic-workshop-postgres-{unique}` | 1-63 chars |
-| `postgresDatabaseName` | Database name | `petclinic` | 1-63 chars |
-| `azureADObjectId` | Azure AD Object ID for PostgreSQL admin | Auto-detected | Valid Object ID |
-| `azureADUserPrincipalName` | Azure AD UPN for PostgreSQL admin | Auto-detected | Valid UPN |
-| `userAssignedIdentityName` | User Assigned Managed Identity name | `petclinic-app-uami` | 1-63 chars |
+| Parameter                  | Description                             | Default                                | Validation      |
+| -------------------------- | --------------------------------------- | -------------------------------------- | --------------- |
+| `resourceGroupName`        | Resource group name                     | `petclinic-workshop-rg`                | 1-90 chars      |
+| `location`                 | Azure region                            | `westus3`                              | Valid region    |
+| `aksClusterName`           | AKS cluster name                        | `petclinic-workshop-aks-{unique}`      | 1-63 chars      |
+| `postgresServerName`       | PostgreSQL server name                  | `petclinic-workshop-postgres-{unique}` | 1-63 chars      |
+| `postgresDatabaseName`     | Database name                           | `petclinic`                            | 1-63 chars      |
+| `azureADObjectId`          | Azure AD Object ID for PostgreSQL admin | Auto-detected                          | Valid Object ID |
+| `azureADUserPrincipalName` | Azure AD UPN for PostgreSQL admin       | Auto-detected                          | Valid UPN       |
+| `userAssignedIdentityName` | User Assigned Managed Identity name     | `petclinic-app-uami`                   | 1-63 chars      |
 
 ### Resource Specifications
 
 #### AKS Cluster
+
 - **SKU**: Automatic (latest stable)
 - **Kubernetes Version**: Latest stable (managed by AKS Automatic)
 - **Node Pool**: 3 nodes, system pool
@@ -94,6 +104,7 @@ az deployment sub create \
 - **Monitoring**: Enabled with Log Analytics and Azure Monitor
 
 #### PostgreSQL Flexible Server
+
 - **Tier**: Burstable (development profile)
 - **SKU**: Standard_B1ms
 - **Version**: PostgreSQL 15
@@ -107,6 +118,7 @@ az deployment sub create \
 After successful deployment, you can:
 
 ### Connect to AKS
+
 ```bash
 # Get the dynamically generated AKS cluster name
 AKS_NAME=$(az aks list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv)
@@ -115,6 +127,7 @@ kubectl get nodes
 ```
 
 ### Connect to PostgreSQL
+
 ```bash
 # Get the dynamically generated PostgreSQL server name
 POSTGRES_NAME=$(az postgres flexible-server list --resource-group petclinic-workshop-rg --query '[0].name' -o tsv)
@@ -153,14 +166,16 @@ az postgres flexible-server connect \
 This deployment includes Azure Service Linkers that create secure connections between your AKS cluster and the backend services:
 
 ### PostgreSQL Service Linker
+
 - **Connection**: AKS → PostgreSQL Flexible Server
 - **Authentication**: User Assigned Managed Identity
 - **Benefits**: Automatic connection string management, secure authentication, no password management
 
 ### Managed Identity Architecture
+
 - **AKS Identity**: System Assigned Managed Identity for cluster operations
 - **Service Linker Identity**: User Assigned Managed Identity for application connections
-- **Benefits**: 
+- **Benefits**:
   - Separation of concerns between cluster and application identities
   - Service Linkers automatically handle data plane access
   - Entra ID admin provides management plane access for PostgreSQL
@@ -193,6 +208,7 @@ This deployment includes Azure Service Linkers that create secure connections be
 ### Validation
 
 Before deployment, validate the templates:
+
 ```bash
 az deployment sub validate \
   --location "westus3" \
@@ -205,6 +221,7 @@ az deployment sub validate \
 ### Cleanup
 
 To remove all resources:
+
 ```bash
 az group delete --name petclinic-workshop-rg --yes --no-wait
 ```
@@ -212,6 +229,7 @@ az group delete --name petclinic-workshop-rg --yes --no-wait
 ## Support
 
 For issues or questions:
+
 - Check Azure documentation for each service
 - Review Bicep best practices documentation
 - Validate templates before deployment

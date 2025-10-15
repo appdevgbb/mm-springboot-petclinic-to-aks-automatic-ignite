@@ -1,30 +1,20 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.37.4.10188",
-      "templateHash": "9954663188671855892"
+      "version": "0.38.33.27573",
+      "templateHash": "17069115767663611528"
     }
   },
   "parameters": {
-    "resourceGroupName": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 90,
-      "metadata": {
-        "description": "The name of the resource group to create"
-      }
-    },
-    "location": {
-      "type": "string",
-      "metadata": {
-        "description": "The location for all resources"
-      }
+    "nameSuffix": {
+      "type": "string"
     },
     "aksClusterName": {
       "type": "string",
+      "defaultValue": "aks-petclinic",
       "minLength": 1,
       "maxLength": 63,
       "metadata": {
@@ -33,50 +23,75 @@
     },
     "postgresServerName": {
       "type": "string",
+      "defaultValue": "db-petclinic",
       "minLength": 1,
-      "maxLength": 63,
+      "maxLength": 12,
       "metadata": {
         "description": "The name of the PostgreSQL Flexible Server"
       }
     },
     "postgresDatabaseName": {
       "type": "string",
+      "defaultValue": "petclinic",
       "minLength": 1,
-      "maxLength": 63,
+      "maxLength": 10,
       "metadata": {
         "description": "PostgreSQL database name"
       }
     },
-    "azureADObjectId": {
-      "type": "string",
+    "deployAzureRBACForCurrentUser": {
+      "type": "bool",
+      "defaultValue": false,
       "metadata": {
-        "description": "Azure AD Object ID of the user to set as PostgreSQL admin"
+        "description": "Whether to deploy the AKS Admin and PostgreSQL Entra ID Admin Role Assignments (requires azureADUserPrincipalName and azureADObjectId parameters)"
       }
     },
     "azureADUserPrincipalName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
         "description": "Azure AD User Principal Name of the user to set as PostgreSQL admin"
       }
     },
+    "azureADObjectId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The Object ID of the Azure AD user to set as PostgreSQL admin"
+      }
+    },
     "userAssignedIdentityName": {
       "type": "string",
+      "defaultValue": "mi-petclinic",
       "minLength": 1,
-      "maxLength": 63,
+      "maxLength": 12,
       "metadata": {
         "description": "Name of the User Assigned Managed Identity for the application"
       }
     },
     "acrName": {
       "type": "string",
+      "defaultValue": "acrpetclinic",
       "minLength": 5,
-      "maxLength": 50,
+      "maxLength": 12,
       "metadata": {
         "description": "Name of the Azure Container Registry"
       }
     },
+    "policyAssignmentName": {
+      "type": "string",
+      "defaultValue": "aks-deployment-safeguards-policy-assignment",
+      "metadata": {
+        "description": "Name of the Azure Policy Assignment to update to Audit mode (for service connector creation)"
+      }
+    },
     "tags": {
       "type": "object",
+      "defaultValue": {
+        "Environment": "Development",
+        "Project": "PetClinic",
+        "ManagedBy": "Bicep"
+      },
       "metadata": {
         "description": "Tags to apply to all resources"
       }
@@ -84,426 +99,252 @@
   },
   "resources": [
     {
-      "type": "Microsoft.Resources/resourceGroups",
-      "apiVersion": "2023-07-01",
-      "name": "[parameters('resourceGroupName')]",
-      "location": "[parameters('location')]",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[parameters('userAssignedIdentityName')]",
+      "location": "[resourceGroup().location]",
       "tags": "[parameters('tags')]"
     },
     {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "deploy-resources",
-      "resourceGroup": "[parameters('resourceGroupName')]",
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4))]",
+      "location": "[resourceGroup().location]",
       "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
+        "sku": {
+          "name": "PerGB2018"
         },
-        "mode": "Incremental",
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
+        "retentionInDays": 30
+      },
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2024-08-01",
+      "name": "[format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_B1ms",
+        "tier": "Burstable"
+      },
+      "properties": {
+        "version": "15",
+        "storage": {
+          "storageSizeGB": 32,
+          "autoGrow": "Enabled",
+          "tier": "P4"
+        },
+        "authConfig": {
+          "activeDirectoryAuth": "Enabled",
+          "passwordAuth": "Disabled",
+          "tenantId": "[subscription().tenantId]"
+        },
+        "network": {
+          "publicNetworkAccess": "Enabled"
+        }
+      },
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "condition": "[parameters('deployAzureRBACForCurrentUser')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
+      "apiVersion": "2024-11-01-preview",
+      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('azureADObjectId'))]",
+      "properties": {
+        "principalName": "[parameters('azureADUserPrincipalName')]",
+        "principalType": "User",
+        "tenantId": "[subscription().tenantId]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2024-08-01",
+      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('postgresDatabaseName'))]",
+      "properties": {
+        "charset": "UTF8",
+        "collation": "en_US.utf8"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": false,
+        "dataEndpointEnabled": false,
+        "encryption": {
+          "status": "disabled"
+        },
+        "policies": {
+          "quarantinePolicy": {
+            "status": "disabled"
           },
-          "aksClusterName": {
-            "value": "[format('{0}-{1}', parameters('aksClusterName'), uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))))]"
+          "trustPolicy": {
+            "type": "Notary",
+            "status": "disabled"
           },
-          "postgresServerName": {
-            "value": "[format('{0}-{1}', parameters('postgresServerName'), uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))))]"
+          "retentionPolicy": {
+            "days": 7,
+            "status": "disabled"
           },
-          "postgresDatabaseName": {
-            "value": "[parameters('postgresDatabaseName')]"
-          },
-          "azureADObjectId": {
-            "value": "[parameters('azureADObjectId')]"
-          },
-          "azureADUserPrincipalName": {
-            "value": "[parameters('azureADUserPrincipalName')]"
-          },
-          "userAssignedIdentityName": {
-            "value": "[parameters('userAssignedIdentityName')]"
-          },
-          "acrName": {
-            "value": "[format('{0}{1}', parameters('acrName'), uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))))]"
-          },
-          "tags": {
-            "value": "[parameters('tags')]"
+          "exportPolicy": {
+            "status": "enabled"
           }
         },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.37.4.10188",
-              "templateHash": "2022451582256012523"
+        "publicNetworkAccess": "Enabled",
+        "zoneRedundancy": "Disabled"
+      },
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2025-08-02-preview",
+      "name": "[parameters('aksClusterName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Automatic",
+        "tier": "Standard"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "agentPoolProfiles": [
+          {
+            "name": "systempool",
+            "mode": "System",
+            "count": 3
+          }
+        ],
+        "addonProfiles": {
+          "omsAgent": {
+            "enabled": true,
+            "config": {
+              "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4)))]",
+              "useAADAuth": "true"
             }
-          },
-          "parameters": {
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "The location for all resources"
-              }
-            },
-            "aksClusterName": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the AKS cluster"
-              }
-            },
-            "postgresServerName": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the PostgreSQL Flexible Server"
-              }
-            },
-            "postgresDatabaseName": {
-              "type": "string",
-              "metadata": {
-                "description": "PostgreSQL database name"
-              }
-            },
-            "azureADObjectId": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure AD Object ID of the user to set as PostgreSQL admin"
-              }
-            },
-            "azureADUserPrincipalName": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure AD User Principal Name of the user to set as PostgreSQL admin"
-              }
-            },
-            "userAssignedIdentityName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the User Assigned Managed Identity for the application"
-              }
-            },
-            "acrName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the Azure Container Registry"
-              }
-            },
-            "tags": {
-              "type": "object",
-              "metadata": {
-                "description": "Tags to apply to all resources"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-              "apiVersion": "2023-01-31",
-              "name": "[parameters('userAssignedIdentityName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]"
-            },
-            {
-              "type": "Microsoft.OperationalInsights/workspaces",
-              "apiVersion": "2023-09-01",
-              "name": "[format('law-{0}', uniqueString(resourceGroup().id))]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "sku": {
-                  "name": "PerGB2018"
-                },
-                "retentionInDays": 30
-              },
-              "tags": "[parameters('tags')]"
-            },
-            {
-              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
-              "apiVersion": "2024-08-01",
-              "name": "[parameters('postgresServerName')]",
-              "location": "[parameters('location')]",
-              "sku": {
-                "name": "Standard_B1ms",
-                "tier": "Burstable"
-              },
-              "properties": {
-                "version": "15",
-                "storage": {
-                  "storageSizeGB": 32,
-                  "autoGrow": "Enabled",
-                  "tier": "P4"
-                },
-                "authConfig": {
-                  "activeDirectoryAuth": "Enabled",
-                  "passwordAuth": "Disabled",
-                  "tenantId": "[subscription().tenantId]"
-                },
-                "network": {
-                  "publicNetworkAccess": "Enabled"
-                }
-              },
-              "tags": "[parameters('tags')]"
-            },
-            {
-              "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
-              "apiVersion": "2024-08-01",
-              "name": "[format('{0}/{1}', parameters('postgresServerName'), parameters('azureADObjectId'))]",
-              "properties": {
-                "principalName": "[parameters('azureADUserPrincipalName')]",
-                "principalType": "User",
-                "tenantId": "[subscription().tenantId]"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
-              "apiVersion": "2024-08-01",
-              "name": "[format('{0}/{1}', parameters('postgresServerName'), parameters('postgresDatabaseName'))]",
-              "properties": {
-                "charset": "UTF8",
-                "collation": "en_US.utf8"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.ContainerRegistry/registries",
-              "apiVersion": "2023-07-01",
-              "name": "[parameters('acrName')]",
-              "location": "[parameters('location')]",
-              "sku": {
-                "name": "Basic"
-              },
-              "properties": {
-                "adminUserEnabled": false,
-                "dataEndpointEnabled": false,
-                "encryption": {
-                  "status": "disabled"
-                },
-                "policies": {
-                  "quarantinePolicy": {
-                    "status": "disabled"
-                  },
-                  "trustPolicy": {
-                    "type": "Notary",
-                    "status": "disabled"
-                  },
-                  "retentionPolicy": {
-                    "days": 7,
-                    "status": "disabled"
-                  },
-                  "exportPolicy": {
-                    "status": "enabled"
-                  }
-                },
-                "publicNetworkAccess": "Enabled",
-                "zoneRedundancy": "Disabled"
-              },
-              "tags": "[parameters('tags')]"
-            },
-            {
-              "type": "Microsoft.ContainerService/managedClusters",
-              "apiVersion": "2025-05-01",
-              "name": "[parameters('aksClusterName')]",
-              "location": "[parameters('location')]",
-              "sku": {
-                "name": "Automatic",
-                "tier": "Standard"
-              },
-              "identity": {
-                "type": "SystemAssigned"
-              },
-              "properties": {
-                "agentPoolProfiles": [
-                  {
-                    "name": "systempool",
-                    "mode": "System",
-                    "count": 3
-                  }
-                ],
-                "addonProfiles": {
-                  "omsAgent": {
-                    "enabled": true,
-                    "config": {
-                      "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-{0}', uniqueString(resourceGroup().id)))]",
-                      "useAADAuth": "true"
-                    }
-                  }
-                },
-                "azureMonitorProfile": {
-                  "metrics": {
-                    "enabled": true,
-                    "kubeStateMetrics": {
-                      "metricLabelsAllowlist": "*",
-                      "metricAnnotationsAllowList": "*"
-                    }
-                  }
-                }
-              },
-              "tags": "[parameters('tags')]",
-              "dependsOn": [
-                "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-{0}', uniqueString(resourceGroup().id)))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
-              "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), 'AcrPull')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
-                "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-05-01').identityProfile.kubeletidentity.objectId]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
-                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('aksClusterName'))]",
-              "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), parameters('azureADObjectId'), '4abbcc35-e782-43d8-92c5-2d3f1bd2253f')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4abbcc35-e782-43d8-92c5-2d3f1bd2253f')]",
-                "principalId": "[parameters('azureADObjectId')]",
-                "principalType": "User"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('aksClusterName'))]",
-              "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), parameters('azureADObjectId'), 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
-              "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
-                "principalId": "[parameters('azureADObjectId')]",
-                "principalType": "User"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
-              ]
-            }
-          ],
-          "outputs": {
-            "aksClusterName": {
-              "type": "string",
-              "value": "[parameters('aksClusterName')]"
-            },
-            "aksClusterFqdn": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-05-01').fqdn]"
-            },
-            "aksClusterId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
-            },
-            "postgresServerName": {
-              "type": "string",
-              "value": "[parameters('postgresServerName')]"
-            },
-            "postgresServerFqdn": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2024-08-01').fullyQualifiedDomainName]"
-            },
-            "postgresDatabaseName": {
-              "type": "string",
-              "value": "[parameters('postgresDatabaseName')]"
-            },
-            "postgresDatabaseId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', parameters('postgresServerName'), parameters('postgresDatabaseName'))]"
-            },
-            "acrName": {
-              "type": "string",
-              "value": "[parameters('acrName')]"
-            },
-            "acrLoginServer": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]"
-            },
-            "userAssignedIdentityId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName'))]"
-            },
-            "userAssignedIdentityClientId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName')), '2023-01-31').clientId]"
-            },
-            "userAssignedIdentityPrincipalId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName')), '2023-01-31').principalId]"
+          }
+        },
+        "azureMonitorProfile": {
+          "metrics": {
+            "enabled": true,
+            "kubeStateMetrics": {
+              "metricLabelsAllowlist": "*",
+              "metricAnnotationsAllowList": "*"
             }
           }
         }
       },
+      "tags": "[parameters('tags')]",
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4)))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4)))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))), 'AcrPull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-08-02-preview').identityProfile.kubeletidentity.objectId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4)))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployAzureRBACForCurrentUser')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('aksClusterName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), parameters('azureADObjectId'), 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+        "principalId": "[parameters('azureADObjectId')]",
+        "principalType": "User"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
       ]
     }
   ],
   "outputs": {
     "resourceGroupName": {
       "type": "string",
-      "value": "[parameters('resourceGroupName')]"
+      "value": "[resourceGroup().name]"
     },
     "resourceGroupId": {
       "type": "string",
-      "value": "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      "value": "[resourceGroup().id]"
     },
     "aksClusterName": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.aksClusterName.value]"
+      "value": "[parameters('aksClusterName')]"
     },
     "aksClusterFqdn": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.aksClusterFqdn.value]"
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-08-02-preview').fqdn]"
     },
     "aksClusterId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.aksClusterId.value]"
+      "value": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+    },
+    "postgresServerId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
     },
     "postgresServerName": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.postgresServerName.value]"
+      "value": "[format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))]"
     },
     "postgresServerFqdn": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.postgresServerFqdn.value]"
+      "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))), '2024-08-01').fullyQualifiedDomainName]"
     },
     "postgresDatabaseName": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.postgresDatabaseName.value]"
+      "value": "[parameters('postgresDatabaseName')]"
     },
     "postgresDatabaseId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.postgresDatabaseId.value]"
+      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('postgresDatabaseName'))]"
     },
     "acrName": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.acrName.value]"
+      "value": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))]"
     },
     "acrLoginServer": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.acrLoginServer.value]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))), '2023-07-01').loginServer]"
     },
     "userAssignedIdentityId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.userAssignedIdentityId.value]"
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName'))]"
     },
     "userAssignedIdentityClientId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.userAssignedIdentityClientId.value]"
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName')), '2023-01-31').clientId]"
     },
     "userAssignedIdentityPrincipalId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'deploy-resources'), '2022-09-01').outputs.userAssignedIdentityPrincipalId.value]"
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentityName')), '2023-01-31').principalId]"
+    },
+    "policyAssignmentName": {
+      "type": "string",
+      "value": "[parameters('policyAssignmentName')]"
     }
   }
 }
