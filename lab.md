@@ -199,24 +199,9 @@ Next, let's open the Petclinic project in a new instance of VS Code and begin ou
 	cd ~/spring-petclinic
 	code .
 	```
-
-1. Once VS Code opens with the PetClinic project, we will be asked a few questions. You can select **Use Maven** and close the two other pop-up windows.
-
-	!IMAGE[vs-code-first-run.png](instructions310381/vs-code-first-run.png)
- 	
-1. we are ready to use the `GitHub Copilot app modernization`. Go to the Extensions icon in VS Code and then search for `GitHub Copilot app modernization`
-
-	!IMAGE[ghcp-extension.png](instructions310381/ghcp-extension.png)
-
-1. Check if there's any update available for the extension. If there is one, click on **Update** and continue.
-1. Select it from the Activity Bar.
+1. Select  `GitHub Copilot app modernization` extension
 
 	!IMAGE[module2-step1-vscode-extension-selection.png](instructions310381/module2-step1-vscode-extension-selection.png)
-
-> [!alert] If prompted by this windows if you should enable null annotation, click on **Enable**.
-!IMAGE[java-null.png](instructions310381/java-null.png)
-
-===
 
 ### Execute the Assessment
 
@@ -476,7 +461,7 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ===
 
-## Generate Containerization Assets
+##  Generate Containerization Assets with AI
 
 **What You'll Do:** Use AI-powered containerization tools to create Docker and Kubernetes manifests for the modernized Spring Boot application.
 
@@ -484,41 +469,7 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ---
 
-### Install Containerization MCP Server
-
-For the next steps we will use the [Containerization Assist MCP Server](https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme). Open a new terminal in VS Code:
-
-1. Open a terminal and run:
-
-	```bash
-	cd ~/spring-petclinic
-	npm install containerization-assist-mcp
-	```
-
-1. Configure VS Code to use the MCP server. Create `.vscode/mcp.json` inside of the `spring-petclinic` directory:
-
-	```json
-	{  
-	  "servers": {
-	    "containerization-assist": {
-		  "command": "./node_modules/.bin/containerization-assist-mcp",
-		  "args": ["start"],
-		  "env": {
-			"DOCKER_SOCKET": "/var/run/docker.sock",
-			"LOG_LEVEL": "info"
-		  }
-		}
-	  }
-	}
-	```
-    
-1. Restart VS Code to enable the Containerization Assist MCP  server in GitHub Copilot.
-
-**Validation:** After restarting VS Code, you should see the Containerization Assist MCP Server available in the Configure Tools dialog:
-
-!IMAGE[ca-mcp.png](instructions310381/ca-mcp.png)
-
-### Generate Containerization Assets with AI
+### Using Containerization Assist
 
 In the GitHub Copilot agent chat, use the following prompt to generate production-ready Docker and Kubernetes manifests:
 
@@ -560,6 +511,23 @@ The Containerization Assist MCP Server will analyze your repository and generate
 - **Kubernetes Service**: LoadBalancer configuration for external access
 
 **Expected Result**: Kubernetes manifests in the `k8s/` directory.
+
+### Build and Push Container Image to ACR
+
+Build the containerized application and push it to your Azure Container Registry:
+
+1. Login to ACR using Azure CLI
+
+	```bash
+	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]
+  
+	```
+
+1. Build the Docker image in Azure Container Registry
+
+	```bash
+	az acr build -t petclinic:0.0.1 . -r @lab.CloudResourceTemplate(LAB502).Outputs[acrName]
+	```
 
 ===
 
@@ -616,67 +584,14 @@ The Azure Portal will display a YAML snippet showing how to use the Service Conn
 > 
 > !IMAGE[module5-step2-azure-service-connector-yaml-snippet.png](instructions310381/module5-step2-azure-service-connector-yaml-snippet.png)
 
-===
-
-### Build and Push Container Image to ACR
-
-Build the containerized application and push it to your Azure Container Registry:
-
-1. Lets create a file that will contain all of the environment variables you might need
-
-	```bash
-	# configure your environment
-	cat <<EOF> ~/azure.env
-	export RESOURCE_GROUP_NAME=myResourceGroup
-	export AKS_CLUSTER_NAME=$(az aks list -o tsv --query [].name)
-	export CURRENT_USER_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || echo "")
-	export CURRENT_USER_UPN=$(az ad signed-in-user show --query userPrincipalName -o tsv 2>/dev/null || echo "")
-	export CLUSTER_ID=$(az aks show -g ${RESOURCE_GROUP_NAME} -n ${AKS_CLUSTER_NAME} --query id -o tsv)
-	export ACR_NAME=$(az acr list -o tsv --query [].name)
-	export ACR_LOGIN_SERVER=$(az acr list -o tsv --query [].loginServer)
-	EOF
-	```
-1. Load the environment variables:
-
-	```bash
-	source ~/azure.env
-	```
-
-	> [!tip] Now that we have saved the environment variables, you can always reload these variables later if needed by running source azure.env on this directory.
-
-1. Login to ACR using Azure CLI
-
-	```bash
-	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]
-  
-	```
-
-1. Build the Docker image
-
-	```bash
-	docker build -t petclinic:0.0.1 .
-	```
-
-1. Tag the image for ACR
-	
-	```bash
-	docker tag petclinic:0.0.1  @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]/petclinic:0.0.1
-	```
-
-1. Push the image to ACR
-
-	```bash
-	docker push $ACR_LOGIN_SERVER/petclinic:0.0.1
-	```
-
-### Deploy to AKS
+### Deploy the application to AKS Automatic
 
 Apply the Kubernetes manifests to deploy the application:
 
 1. Update the image name in your deployment manifest with your ACR login server. You can retrieve the name of your Azure Container Registry with this command:
 
 	```bash
-	echo $ACR_LOGIN_SERVER
+	@lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]/petclinic:0.0.1
 	```
 
 1. Apply the deployment manifest
