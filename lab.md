@@ -1,132 +1,189 @@
 @lab.Title
 
+This workshop demonstrates how to migrate and modernize the iconic **Spring Boot PetClinic** application from local execution to **Azure AKS Automatic**. You'll experience the complete modernization journey using AI-powered tools such as **GitHub Copilot app modernization** and **Containerization Assist MCP Server**.
+
+---
+
+## Workshop Overview
+
+### Learning Objectives
+
+By the end of this workshop, you will be able to:
+
+- Run [Spring Boot PetClinic](https://github.com/spring-projects/spring-petclinic) locally with PostgreSQL and basic authentication.  
+- Modernize the codebase using [GitHub Copilot app modernization](https://marketplace.visualstudio.com/items?itemName=vscjava.migrate-java-to-azure).  
+- Migrate the database to [Azure PostgreSQL Flexible Server](https://learn.microsoft.com/azure/postgresql/flexible-server/) integrated with [Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/active-directory/).  
+- Containerize the app using [Containerization Assist MCP Server](https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme).  
+- Deploy to [AKS Automatic](https://learn.microsoft.com/azure/aks/automatic/) using [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) and [Service Connector](https://learn.microsoft.com/en-us/azure/service-connector/).
+
+---
+
+### Prerequisites Check
+
+Your virtual machine already includes all the required tools:
+
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)  
+- [Java 17 or 21](https://learn.microsoft.com/en-us/java/openjdk/download) (Microsoft OpenJDK)  
+- [Maven 3.8+](https://maven.apache.org/install.html)  
+- [Docker Desktop](https://www.docker.com/)  
+- [Visual Studio Code](https://code.visualstudio.com/) with:  
+  - Java Extension Pack  
+  - GitHub Copilot App Modernization Extension Pack  
+- [kubectl](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli#install-the-azure-cli-and-kubernetes-cli)  
+- Windows Terminal with Bash (WSL)  
+- Git  
+
+===
+
 ## Welcome to Your Lab Environment
 
 To begin, log into the virtual machine using the following credentials: +++@lab.VirtualMachine(Win11-Pro-Base).Password+++
 
 ---
 
-===
+### Setting Up the Lab
 
-# Spring Boot PetClinic Migration & Modernization Workshop
+#### Sign In to Azure
 
-This workshop demonstrates how to migrate and modernize the iconic Spring Boot PetClinic application from local execution to cloud deployment on Azure AKS Automatic. Participants will experience the complete modernization journey using AI-powered tools: GitHub Copilot app modernization and Containerization Assist MCP Server.
+1. Open Microsoft Edge and log into Azure with the credentials in the **Resources** tab: +++https://portal.azure.com/+++
 
-## Workshop Goals
+	!IMAGE[resources.png](instructions310381/resources.png)
 
-Simulate on‑prem execution by running [Spring Boot PetClinic](https://github.com/spring-projects/spring-petclinic) locally with PostgreSQL and basic auth, modernize the code with [GitHub Copilot app modernization](https://marketplace.visualstudio.com/items?itemName=vscjava.migrate-java-to-azure), migrate to [Azure PostgreSQL Flexible Server](https://learn.microsoft.com/azure/postgresql/flexible-server/) using [Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/active-directory/), containerize with (Containerization Assist MCP Server)[https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme] to generate Docker and Kubernetes manifests, and deploy to [AKS Automatic](https://learn.microsoft.com/azure/aks/automatic/) with [workload identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) and [Service Connector](https://learn.microsoft.com/azure/service-connector/).
+1. Next, in a terminal window, sign in to uze azure cli:
 
-## Workshop Structure
+	```bash
+	az login
+	```
+1. click on the URL in the terminal. This will open a new tab in Edge.
 
-```
-~/mm-springboot-petclinic-to-aks-automatic-ignite/
-├── lab.md                              # This file - Complete workshop guide
-├── infra/                              # Infrastructure and automation
-│   ├── setup-local-lab-infra.sh        # One-command workshop setup
-├── src/                                # Symlink to ~/spring-petclinic
-├── manifests/                          # Generated Kubernetes manifests (empty initially)
-└── images/                             # Workshop screenshots and diagrams
+1. Pick your user account to finish logging in.
 
-~/spring-petclinic/                     # Spring PetClinic repository
-├── src/main/java/                      # Java source code (modernized during workshop)
-├── src/main/resources/                 # Application properties and configuration
-├── pom.xml                             # Maven dependencies
-└── ...                                 # Other Spring Boot PetClinic files
-```
-
-### Prerequisites Check
-
-For this lab, we will use the following tools, which are already installed on this Virtual Machine:
-
-- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (logged in with `az login` )
-- [Java 17 or 21](https://learn.microsoft.com/en-us/java/openjdk/download) (Microsoft OpenJDK)
-- [Maven 3.8+](https://maven.apache.org/install.html)
-- [Docker Desktop](https://www.docker.com/) or equivalent.
-- [VS Code with Java Extension Pack](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)
-- [GitHub Copilot app modernization Extension Pack](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-upgrade)
-- [kubectl](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli#install-the-azure-cli-and-kubernetes-cli) (available via Azure AKS client tools).
-- Windows Terminal with `bash` (Windows Subsystem for Linux).
-- git
-
-===
-
-## Module 1: Set Up and Test PetClinic Locally
-
-**What You'll Do:** Set up a complete local development environment with the PetClinic application running against PostgreSQL, then explore the application in your browser.
-
-**What You'll Learn:** How to quickly deploy a local Spring Boot development environment with Docker-based PostgreSQL and verify application functionality.
+	!IMAGE[az-cli-login2.png](instructions310381/az-cli-login2.png)
 
 ---
 
-### Run the Automated Setup Script
+#### Authenticate GitHub Copilot
 
-To facilitate standing up our local environment, we will use a script to perform a complete one-command setup. This script will:
+To use GitHub Copilot, sign in with the GitHub account provided in your lab environment.
 
-1. **Clone the repository** to `~/spring-petclinic` and creates a symlink for easy access
-2. **Launch PostgreSQL** in a Docker container with pre-configured credentials
-3. **Build and start** the Spring Boot application connected to the database
+1. In Edge, open +++https://github.com/enterprises/skillable-events/sso+++
 
-Steps:
+1. Log in with the credentials listed in the **Resources** tab.
 
-1. Open the Windows Terminal
+### Sign In to VS Code with GitHub
 
-	!IMAGE[windows-term.png](instructions310381/windows-term.png)
+After signing in to GitHub, return to VS Code and complete the Copilot setup:
 
-1. Clone the GitHub repository for this workshop.
+1. Click the **account icon** (bottom right) → **Sign in to use Copilot.**
 
-	```bash
-	git clone https://github.com/appdevgbb/mm-springboot-petclinic-to-aks-automatic-ignite.git
-	```
+	!IMAGE[copilot-signin.png](instructions310381/copilot-signin.png)
 
-1. Next, execute the setup script from the `infra` directory:
+1. Select **Continue with GitHub**
 
-	```bash
-	cd mm-springboot-petclinic-to-aks-automatic-ignite/infra
-	chmod +x setup-local-lab-infra.sh
-	./setup-local-lab-infra.sh
-	```
+	!IMAGE[continue-to-github.png](instructions310381/continue-to-github.png)
 
-The script will complete in approximately 1-2 minutes. When finished, your PetClinic application will be running at **http://localhost:8080**.
+1. Authorize VS Code to access your GitHub account.
 
-> [!alert] If prompted, click on **Allow** the Docker Desktop access to the network
-!IMAGE[allow-docker.png](instructions310381/allow-docker.png)
+	!IMAGE[authorize-github.png](instructions310381/authorize-github.png)
 
+1. Click **Connect**, then **Authorize Visual-Studio-Code**.
+
+	!IMAGE[authorized-github.png](instructions310381/authorized-github.png)
+
+1. When prompted, choose to always allow **vscode.dev** to open links.
+
+	!IMAGE[allow-vs-code.png](instructions310381/allow-vs-code.png)
+
+1. Back in VS Code, open the **GitHub Copilot Chat** window and switch the model to **Claude Sonnet 4.5**.
+
+	!IMAGE[github-claude.png](instructions310381/github-claude.png)
+
+### Install the Service Connector
+
+```bash
+az extension add --name serviceconnector-passwordless --upgrade
+
+az aks connection create postgres-flexible \
+--source-id @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId] \
+--target-id @lab.CloudResourceTemplate(LAB502).Outputs[postgresDatabaseId] \
+--workload-identity @lab.CloudResourceTemplate(LAB502).Outputs[userAssignedIdentityId] \
+--client-type none \
+--kube-namespace default
+```
+
+### Configure Azure RBAC Authentication for kubectl
+
+Before deploying to AKS, you need to configure kubectl to use Azure RBAC authentication:
+
+```bash
+# add Admin to your user
+az role assignment create --assignee @lab.CloudPortalCredential(User1).Username --role "Azure Kubernetes Service RBAC Cluster Admin" --scope  @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId]
+
+# Get AKS credentials (this downloads the kubeconfig)
+az aks get-credentials --resource-group  @lab.CloudResourceGroup(myResourceGroup).Name --name @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterName]
+
+# Configure kubectl to use Azure RBAC authentication
+kubelogin convert-kubeconfig --login azurecli
+
+# Test AKS access
+kubectl get pods
+```
+
+> [!note] The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
+
+#### You're Ready to Begin
+
+Your environment is now configured. Next, you'll verify the local PetClinic application and begin the migration and modernization journey.
+
+===
+
+## Verify and Explore PetClinic Locally
+
+**What You'll Do:** Confirm that the locally deployed PetClinic application is running with PostgreSQL, and explore its main features.
+
+**What You'll Learn:** How to verify a local Spring Boot application connected to a Docker-based PostgreSQL database and navigate its core functionality.
+
+---
 
 ### Verify the Application
 
-Open your browser and navigate to `http://localhost:8080` to confirm the application is running. 
+1. Run the local postgres database
+
+	```bash
+	 docker run --name "petclinic-postgres" \
+      -e POSTGRES_DB=petclinic \
+      -e POSTGRES_USER=petclinic \
+      -e POSTGRES_PASSWORD=petclinic \
+      -p 5432:5432 \
+      -d postgres:15
+	```
+
+1. Run the petclinic
+
+	```bash
+	mvn spring-boot:run \
+    -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none"
+	```
+
+1. Open your browser and go to http://localhost:8080 to confirm the PetClinic application is running.
 
 !IMAGE[peclinic.png](instructions310381/peclinic.png)
 
 **Explore the PetClinic Application:**
 
-Once the application is running in your browser, take some time to explore the functionality:
+Once it's running, try out the key features:
 
-- **Find Owners**: Go to "FIND OWNERS" -> leave the "Last Name" field blank -> click "Find Owner" to see all 10 owners.
+* **Find Owners:** Select **"FIND OWNERS"**, leave the Last Name field blank, and click "Find Owner" to list all 10 owners.
 
-- **View Owner Details**: Click on an owner like "Betty Davis" to see their information and pets.
+* **View Owner Details:** Click an owner (e.g., Betty Davis) to see their information and pets.
 
-- **Edit Pet Information**: From an owner's page, click "Edit Pet" to see how pet details are managed.
+* **Edit Pet Information:** From an owner's page, click **"Edit Pet"** to view or modify pet details.
 
-- **Review Veterinarians**: Navigate to "VETERINARIANS" to see the 6 vets with their specialties (radiology, surgery, dentistry).
-
----
-
-### Troubleshooting Module 1
-
-**If the application fails to start:**
-1. Check Docker is running: `docker ps`
-2. Verify PostgreSQL container is healthy: `docker logs petclinic-postgres`
-3. Check application logs: `tail -f ~/app.log`
-4. Ensure port 8080 is not in use: `lsof -i :8080`
-
-**If the database connection fails:**
-1. Verify PostgreSQL container is running on port 5432: `docker port petclinic-postgres`
-2. Test database connectivity: `docker exec -it petclinic-postgres psql -U petclinic -d petclinic -c "SELECT 1;"`
+* **Review Veterinarians:** Go to **"VETERINARIANS"** to see the 6 vets and their specialties (radiology, surgery, dentistry).
 
 ===
 
-## Module 2: Application Modernization
+## Application Modernization
 
 **What You'll Do:** Use GitHub Copilot app modernization to assess, remediate, and modernize the Spring Boot application in preparation to migrate the workload to AKS Automatic.
 
@@ -159,48 +216,6 @@ Next, let's open the Petclinic project in a new instance of VS Code and begin ou
 > [!alert] If prompted by this windows if you should enable null annotation, click on **Enable**.
 !IMAGE[java-null.png](instructions310381/java-null.png)
 
-===
-
-
-### Authenticate GitHub Copilot
-
-In order to use the GitHub Copilot, you will need to log in using the provided GitHub account.
-
-1. Open a new tab in the Edge browser and navigate to +++https://github.com/enterprises/skillable-events/sso+++
-
-1. Sign in with the GitHub account credentials provided in your lab environment.
-
-> [!hint] Your credentials can be found in the **Resources** tab
-!IMAGE[resources.png](instructions310381/resources.png)
-
-
-### Log into VS Code with GitHub account
-
-After you have logged in, return to VS Code, click the account icon in the bottom right corner, then:
-
-1. Click **Sign in to use Copilot**. 
-
-	!IMAGE[copilot-signin.png](instructions310381/copilot-signin.png)
-
-1. Then select **Continue with GitHub**
-
-	!IMAGE[continue-to-github.png](instructions310381/continue-to-github.png)
-
-1. This will redirect you to a webpage to authorize VS Code to access your GitHub account. 
-
-	!IMAGE[authorize-github.png](instructions310381/authorize-github.png)
-
-1. Click the **Connect** button, then click **Authorize Visual-Studio-Code** to complete the authorization.
-
-	!IMAGE[authorized-github.png](instructions310381/authorized-github.png)
-
-1. Next, select to always allow vscode.dev to open links
-
-	!IMAGE[allow-vs-code.png](instructions310381/allow-vs-code.png)
-
-1. Now back in vs code, go to the GitHub Copilot chat window and change the model to **Claude Sonet 3.7** or later
-
-	!IMAGE[github-claude.png](instructions310381/github-claude.png)
 ===
 
 ### Execute the Assessment
@@ -282,8 +297,6 @@ appcat:
 
 If you want a broader scan (including dependency checks) change `mode` to `full`, or add/remove entries under `target` to focus recommendations on a specific runtime or Azure compute service.
 
-===
-
 ### Review the Assessment results
 
 After the assessment completes, you'll see a success message in the GitHub Copilot chat summarizing what was accomplished:
@@ -352,10 +365,6 @@ Click the **Run Task** button described in the previous section to kick off the 
 !IMAGE[module2-step12-run-migration-task.png](instructions310381/module2-step12-run-migration-task.png)
 
 The tool will execute the `appmod-run-task` command for `managed-identity-spring/mi-postgresql-spring`, which will examine the workspace structure and initiate the migration task to modernize your Spring Boot application for Azure PostgreSQL with managed identity authentication. If prompted to run shell commands, please review and allow each command as the Agent may require additional context before execution.
-
-When the migration task for PostgreSQL with Entra ID authentication begins to run, you will see a chat similar to this in the agent interface:
-
-!IMAGE[module2-step13-migration-task-initialized.png](instructions310381/module2-step13-migration-task-initialized.png)
 
 ### Review Migration Plan and Begin Code Migration
 
@@ -467,7 +476,7 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ===
 
-## Module 3: Generate Containerization Assets
+## Generate Containerization Assets
 
 **What You'll Do:** Use AI-powered containerization tools to create Docker and Kubernetes manifests for the modernized Spring Boot application.
 
@@ -534,9 +543,13 @@ Also include:
 - Keep envFrom with secretRef to make all secret keys available in the pod
 ```
 
-> [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace
-!IMAGE[ca-mcp-allow.png](instructions310381/ca-mcp-allow.png)
-
+> [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace. Select **Allow in this Workspace** or **Always Allow**.
+> 
+> !IMAGE[ca-mcp-allow.png](instructions310381/ca-mcp-allow.png)
+>
+> You will also need to allow the MCP server to make LLM requests. 
+> Select **Always**.
+> !IMAGE[ca-mcp-llm.png](instructions310381/ca-mcp-llm.png)
 
 The Containerization Assist MCP Server will analyze your repository and generate:
 
@@ -546,11 +559,11 @@ The Containerization Assist MCP Server will analyze your repository and generate
 
 - **Kubernetes Service**: LoadBalancer configuration for external access
 
-**Expected Result**: Production-ready containerization assets in the `k8s/` directory.
+**Expected Result**: Kubernetes manifests in the `k8s/` directory.
 
 ===
 
-## Module 4: Deploy to AKS
+## Deploy to AKS
 
 **What You'll Do:** Deploy the modernized application to AKS Automatic using Service Connector secrets for passwordless authentication with PostgreSQL.
 
@@ -559,8 +572,6 @@ The Containerization Assist MCP Server will analyze your repository and generate
 ---
 
 > [!knowledge] **About AKS Automatic:** AKS Automatic is a new mode for Azure Kubernetes Service that provides an optimized and simplified Kubernetes experience. It offers automated cluster management, built-in security best practices, intelligent scaling, and pre-configured monitoring - making it ideal for teams who want to focus on applications rather than infrastructure management.
-
-
 
 ### Access AKS Service Connector and Retrieve PostgreSQL Configuration
 
@@ -611,21 +622,6 @@ The Azure Portal will display a YAML snippet showing how to use the Service Conn
 
 Build the containerized application and push it to your Azure Container Registry:
 
-1. From a terminal, login into Azure:
-
-	```bash
-	az login --use-device-code	
-	```
-	Open up Edge and navigate to +++https://microsoft.com/devicelogin+++. Once there, type in the code provided and follow through the login process.
-
-	!IMAGE[az-login.png](instructions310381/az-login.png)
-
-	>[!note] You might need to enter your Temporary Access Pass. This information is available in the **Resources** tab of your instructions.
-
-	!IMAGE[az-cli-login.png](instructions310381/az-cli-login.png)
-
-	Click on **Continue**
-
 1. Lets create a file that will contain all of the environment variables you might need
 
 	```bash
@@ -651,7 +647,8 @@ Build the containerized application and push it to your Azure Container Registry
 1. Login to ACR using Azure CLI
 
 	```bash
-	az acr login --name ${ACR_NAME}
+	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]
+  
 	```
 
 1. Build the Docker image
@@ -663,7 +660,7 @@ Build the containerized application and push it to your Azure Container Registry
 1. Tag the image for ACR
 	
 	```bash
-	docker tag petclinic:0.0.1 $ACR_LOGIN_SERVER/petclinic:0.0.1
+	docker tag petclinic:0.0.1  @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]/petclinic:0.0.1
 	```
 
 1. Push the image to ACR
@@ -671,27 +668,6 @@ Build the containerized application and push it to your Azure Container Registry
 	```bash
 	docker push $ACR_LOGIN_SERVER/petclinic:0.0.1
 	```
-
-### Configure Azure RBAC Authentication for kubectl
-
-Before deploying to AKS, you need to configure kubectl to use Azure RBAC authentication:
-
-```bash
-# add Admin to your user
-az role assignment create --assignee "${CURRENT_USER_UPN}" --role "Azure Kubernetes Service RBAC Cluster Admin" --scope "$CLUSTER_ID"
-
-# Get AKS credentials (this downloads the kubeconfig)
-az aks get-credentials --resource-group ${RESOURCE_GROUP_NAME} --name ${AKS_CLUSTER_NAME}
-
-# Configure kubectl to use Azure RBAC authentication
-kubelogin convert-kubeconfig --login azurecli
-
-# Test AKS access
-kubectl get pods
-```
-
-> [!note] The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
-
 
 ### Deploy to AKS
 
@@ -829,7 +805,27 @@ This workshop demonstrated how AI-powered tools can dramatically accelerate appl
 
 ===
 
-## Help
+### Help
+
+In this section you can find tips on how to troubleshoot your lab.
+
+---
+
+#### Troubleshooting Module 1
+
+**If the application fails to start:**
+1. Check Docker is running: `docker ps`
+2. Verify PostgreSQL container is healthy: `docker logs petclinic-postgres`
+3. Check application logs: `tail -f ~/app.log`
+4. Ensure port 8080 is not in use: `lsof -i :8080`
+
+**If the database connection fails:**
+1. Verify PostgreSQL container is running on port 5432: `docker port petclinic-postgres`
+2. Test database connectivity: `docker exec -it petclinic-postgres psql -U petclinic -d petclinic -c "SELECT 1;"`
+
+---
+
+#### Troubleshooting Module 4
 
 If for some reason you've made here and your deployment did not work, your deployment file should ressemble this example.
 
