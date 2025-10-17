@@ -54,7 +54,7 @@ To begin, log into the virtual machine using the following credentials: +++@lab.
 	```bash
 	az login
 	```
-1. click on the URL in the terminal. This will open a new tab in Edge.
+1. Press the `CTRL` key and then click on the URL in the terminal. This will open a new tab in Edge.
 	!IMAGE[az-cli-click-url.png](instructions310381/az-cli-click-url.png)
 
 1. Pick your user account to finish logging in.
@@ -79,6 +79,11 @@ az aks connection create postgres-flexible \
 --client-type none \
 --kube-namespace default
 ```
+
+
+> [!note] This command will take about 8 minutes to run. To make most of your time on this lab, you can leave it running on this terminal until it finishes. You can open a new tab in the Windows Terminal by clicking on the plus sign and proceed to the next step on this lab.
+> !IMAGE[new-tab.png](instructions310381/new-tab.png)
+
 ---
 
 ### Configure Azure RBAC Authentication for kubectl
@@ -121,9 +126,16 @@ To use GitHub Copilot, sign in with the GitHub account provided in your lab envi
 
 After signing in to GitHub, open VS Code and complete the Copilot setup:
 
+1. In your terminal, run the following command to launch a new VS Code instance into the `spring-petclinic` source directory:
+   
+	```bash
+	cd ~/spring-petclinic
+	code .
+	```
+
 1. Click the **account icon** (bottom right) → **Sign in to use Copilot.**
 
-	!IMAGE[copilot-signin.png](instructions310381/copilot-signin.png)
+	!IMAGE[signed-out.png](instructions310381/signed-out.png)
 
 1. Select **Continue with GitHub**
 
@@ -144,8 +156,6 @@ After signing in to GitHub, open VS Code and complete the Copilot setup:
 1. Back in VS Code, open the **GitHub Copilot Chat** window and switch the model to **Claude Sonnet 4.5**.
 
 	!IMAGE[github-claude.png](instructions310381/github-claude.png)
-
-1. Close VS Code. 
  
 #### You're Ready to Begin
 
@@ -163,7 +173,9 @@ Your environment is now configured. Next, you'll verify the local PetClinic appl
 
 ### Verify the Application
 
-1. Run the petclinic
+1. In VS Code, open a new terminal by pressing ``Ctrl+` `` (backstick) or go to **Terminal** → **New Terminal** in the menu.
+
+1. In the new terminal, run the petclinic
 
 	```bash
 	 mvn clean compile && mvn spring-boot:run \
@@ -186,6 +198,8 @@ Once it's running, try out the key features:
 
 * **Review Veterinarians:** Go to **"VETERINARIANS"** to see the 6 vets and their specialties (radiology, surgery, dentistry).
 
+After exploring the PetClinic application, you can stop it by pressing `CTRL+C`
+
 ===
 
 ## Application Modernization
@@ -196,17 +210,11 @@ Once it's running, try out the key features:
 
 ---
 
-Next, let's open the Petclinic project in a new instance of VS Code and begin our modernization work. 
+Next let's begin our modernization work. 
 
-1. In your terminal, run the following command to launch a new VS Code instance into the `spring-petclinic` source directory:
-   
-	```bash
-	cd ~/spring-petclinic
-	code .
-	```
 1. Select  `GitHub Copilot app modernization` extension
-
-	!IMAGE[module2-step1-vscode-extension-selection.png](instructions310381/module2-step1-vscode-extension-selection.png)
+	
+	!IMAGE[github-copilot-appmod-ext.png](instructions310381/github-copilot-appmod-ext.png)
 
 ### Execute the Assessment
 
@@ -291,7 +299,7 @@ If you want a broader scan (including dependency checks) change `mode` to `full`
 
 After the assessment completes, you'll see a success message in the GitHub Copilot chat summarizing what was accomplished:
 
-!IMAGE[module2-step8-assessment-report-details.png](instructions310381/module2-step8-assessment-report-details.png)
+!IMAGE[module2-assessment-report-overview.png](instructions310381/module2-assessment-report-overview.png)
 
 The assessment analyzed the Spring Boot Petclinic application for cloud migration readiness and identified the following:
 
@@ -299,8 +307,6 @@ Key Findings:
 
 * 8 cloud readiness issues requiring attention (1)
 * 1 Java upgrade opportunity for modernization (2)
-
-!IMAGE[module2-assessment-report-overview.png](instructions310381/module2-assessment-report-overview.png)
 
 **Resolution Approach:** More than 50% of the identified issues can be automatically resolved through code and configuration updates using GitHub Copilot's built-in app modernization capabilities (3).
 
@@ -316,7 +322,8 @@ This prioritization framework ensures teams focus on blocking issues first while
 
 Click on individual issues in the report to see detailed recommendations. In practice, you would review all recommendations and determine the set that aligns with your migration and modernization goals for the application.
 
-For this lab, we will spend our time focusing on one modernization recommendation: updating the code to use modern authentication via Azure Database for PostgreSQL Flexible Server with Entra ID authentication.
+> [!note] For this lab, we will spend our time focusing on one modernization recommendation: updating the code to use modern authentication via Azure Database for PostgreSQL Flexible Server with Entra ID authentication.
+
 
 | Aspect | Details |
 |--------|---------|
@@ -468,35 +475,69 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ##  Generate Containerization Assets with AI
 
-**What You'll Do:** Use AI-powered containerization tools to create Docker and Kubernetes manifests for the modernized Spring Boot application.
+**What You'll Do:** Use AI-powered tools to generate Docker and Kubernetes manifests for your modernized Spring Boot application.
 
-**What You'll Learn:** How AI-powered tools can generate production-ready containerization assets, including optimized Dockerfiles and Kubernetes deployment manifests with proper health checks and service configurations.
+**What You'll Learn:** How to create production-ready containerization assets — including optimized Dockerfiles and Kubernetes manifests configured with health checks, secrets, and workload identity.
 
 ---
+
+### Retrieve PostgreSQL Configuration from AKS Service Connector
+
+Before you can use **Containerization Assist**, you must first retrieve the PostgreSQL Service Connector configuration from your AKS cluster.
+
+This information ensures that your generated Kubernetes manifests are correctly wired to the database using managed identity and secret references.
+
+### Access AKS Service Connector and Retrieve PostgreSQL Configuration
+
+1. Open a new tab in the Edge browser and navigate to +++https://portal.azure.com/+++
+
+1. Sign in to Azure using your lab provided credentials available in the **Resources** tab.
+
+1. In the top search bar, type **aks-petclinic** and select the AKS Automic cluster.
+
+	!IMAGE[select-aks-petclinic.png](instructions310381/select-aks-petclinic.png)
+
+1. In the left-hand menu under **Settings**, select **Service Connector**.
+
+	!IMAGE[select-sc.jpg](instructions310381/select-sc.jpg)
+
+1.  You'll see the service connection that was automatically created **PostgreSQL connection** with a name that starts with **postgresflexible_** connecting to your PostgreSQL flexible server.
+
+1. Select the **DB for PostgreSQL flexible server** and click the **YAML snipper** button in the action bar
+
+	!IMAGE[yaml-snippet.png](instructions310381/yaml-snippet.png)
+
+1. Expand this connection to see the variables that were created by the `sc-postgresflexiblebft3u-secret` in the cluster
+
+	!IMAGE[sc-variables.png](instructions310381/sc-variables.png)
+
+### Retrieve PostgreSQL YAML Configuration
+
+The Azure Portal will display a YAML snippet showing how to use the Service Connector secrets for PostgreSQL connectivity.
+> [+] Service Connector YAML snippet
+> 
+> !IMAGE[sample-yaml.jpg](instructions310381/sample-yaml.jpg)
+
+> [!note] 
+> 1. The portal shows a sample deployment with workload identity configuration
+> 2. Key Elements:
+>   - Service account: `sc-account-d4157fc8-73b5-4a68-acf4-39c8f22db792`
+>   - Secret reference: `sc-postgresflexiblebft3u-secret`
+>   - Workload identity label: `azure.workload.identity/use: "true"`
+> 
+> The Service Connector secret (`sc-postgresflexiblebft3u-secret` in this example), will contain the following variables:
+- AZURE_POSTGRESQL_HOST
+- AZURE_POSTGRESQL_PORT
+- AZURE_POSTGRESQL_DATABASE
+- AZURE_POSTGRESQL_CLIENTID (map to both AZURE_CLIENT_ID and AZURE_MANAGED_IDENTITY_NAME)
+- AZURE_POSTGRESQL_USERNAME
 
 ### Using Containerization Assist
 
 In the GitHub Copilot agent chat, use the following prompt to generate production-ready Docker and Kubernetes manifests:
 
 ```prompt
-Help me containerize the application at ./src and generate Kubernetes deployment artifacts using Containerization Assist. Put all of the kubernetes files in a directory called k8s. 
-
-PostgreSQL Configuration via Azure Service Connector:
-- Reference secret: sc-pg-secret
-- Map these secret keys to environment variables:
-  - AZURE_POSTGRESQL_HOST
-  - AZURE_POSTGRESQL_PORT
-  - AZURE_POSTGRESQL_DATABASE
-  - AZURE_POSTGRESQL_CLIENTID (map to both AZURE_CLIENT_ID and AZURE_MANAGED_IDENTITY_NAME)
-  - AZURE_POSTGRESQL_USERNAME
-
-Health Checks:
-- Liveness probe: /actuator/health
-- Readiness probe: /actuator/health
-
-Also include:
-- A LoadBalancer Service exposing port 80 (targeting container port 8080)
-- Keep envFrom with secretRef to make all secret keys available in the pod
+Help me containerize the application at ./src and generate Kubernetes deployment artifacts using Containerization Assist. Put all of the kubernetes files in a directory called k8s. PostgreSQL Configuration via Azure Service Connector.
 ```
 
 > [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace. Select **Allow in this Workspace** or **Always Allow**.
@@ -545,49 +586,6 @@ Build the containerized application and push it to your Azure Container Registry
 ---
 
 > [!knowledge] **About AKS Automatic:** AKS Automatic is a new mode for Azure Kubernetes Service that provides an optimized and simplified Kubernetes experience. It offers automated cluster management, built-in security best practices, intelligent scaling, and pre-configured monitoring - making it ideal for teams who want to focus on applications rather than infrastructure management.
-
-### Access AKS Service Connector and Retrieve PostgreSQL Configuration
-
-Navigate to your AKS cluster in the Azure Portal and access the Service Connector blade to retrieve the PostgreSQL connection configuration.
-
-1. Open a new tab in the Edge browser and navigate to +++https://portal.azure.com/+++
-
-1. Sign in to Azure using your lab provided credentials available in the **Resources** tab.
-
-1. In the search bar, type "petclinic-workshop-rg" and select the resource group that was created by the setup script
-
-	!IMAGE[module5-step1-2-navigate-to-rg.png](instructions310381/module5-step1-2-navigate-to-rg.png)
-
-1. In the resource group, locate your AKS cluster (it will have a name like `petclinic-workshop-aks-xxxxxx` where xxxxxx is a random suffix)
-
-	!IMAGE[module5-step1-3-Find-AKS-Cluster.png](instructions310381/module5-step1-3-Find-AKS-Cluster.png)
-
-1. Click on the AKS cluster name to open the cluster overview page.
-
-1. In the left menu under "Settings", click on "Service Connector"
-
-	!IMAGE[module5-step1-aks-service-connector-postgres-view.png](instructions310381/module5-step1-aks-service-connector-postgres-view.png)
-
-1.  You'll see the service connection that was automatically created **PostgreSQL connection** with name "pg" connecting to your PostgreSQL flexible server.
-
-1. Select the PostgreSQL connection row (the one with "DB for PostgreSQL flexible server") and click the "Sample code" button in the action bar
-
-	!IMAGE[module5-step1-azure-service-connector-postgres.png](instructions310381/module5-step1-azure-service-connector-postgres.png)
-
-### Retrieve PostgreSQL YAML Configuration
-
-The Azure Portal will display a YAML snippet showing how to use the Service Connector secrets for PostgreSQL connectivity.
-
-> [!note] 
-> 1. Review YAML Snippet: The portal shows a sample deployment with workload identity configuration
-> 2. Key Elements:
->   - Service account: `sc-account-d4157fc8-73b5-4a68-acf4-39c8f22db792`
->   - Secret reference: `sc-pg-secret`
->   - Workload identity label: `azure.workload.identity/use: "true"`
-
-> [+] Service Connector YAML snippet
-> 
-> !IMAGE[module5-step2-azure-service-connector-yaml-snippet.png](instructions310381/module5-step2-azure-service-connector-yaml-snippet.png)
 
 ### Deploy the application to AKS Automatic
 
@@ -678,22 +676,26 @@ Verify that the application is using passwordless authentication:
 
 ### What You Accomplished
 
-**Module 1 - Local Environment Setup**
+**Local Environment Setup**
+
 - Set up Spring Boot PetClinic with PostgreSQL in Docker
 - Validated local application functionality and database connectivity
 
-**Module 2 - Application Modernization** 
+**Application Modernization**
+
 - Used GitHub Copilot App Modernization to assess code for cloud readiness
 - Migrated from basic PostgreSQL authentication to Azure PostgreSQL Flexible Server
 - Implemented Microsoft Entra ID authentication with managed identity
 - Applied automated code transformations for cloud-native patterns
 
-**Module 3 - Containerization**
+**Containerization**
+
 - Generated Docker containers using AI-powered tools
 - Created optimized Kubernetes manifests with health checks and security best practices
 - Built and pushed container images to Azure Container Registry
 
-**Module 4 - Cloud Deployment**
+**Cloud Deployment**
+
 - Deployed to AKS Automatic with enterprise-grade security
 - Configured passwordless authentication using workload identity
 - Integrated Azure Service Connector for seamless database connectivity
@@ -705,16 +707,19 @@ Verify that the application is using passwordless authentication:
 
 
 **Immediate Next Steps:**
+
 - Explore the deployed application's monitoring and logging capabilities
 - Practice scaling the deployment using `kubectl scale`
 - Experiment with different environment configurations
 
 **Continue Your Azure Journey:**
+
 - [AKS Automatic Documentation](https://learn.microsoft.com/en-us/azure/aks/intro-aks-automatic) - Deep dive into automatic cluster management
 - [Azure Well-Architected Framework](https://learn.microsoft.com/azure/well-architected/) - Learn enterprise architecture best practices
 - [AKS Engineering Blog](https://blog.aks.azure.com/) - Stay updated with latest AKS features and patterns
 
 **Hands-On Labs:**
+
 - [AKS Labs](https://azure-samples.github.io/aks-labs/) - Interactive learning experiences
 - [Azure Architecture Center](https://learn.microsoft.com/azure/architecture/) - Reference architectures and patterns
 - [Microsoft Learn - AKS Learning Path](https://learn.microsoft.com/training/paths/intro-to-kubernetes-on-azure/) - Structured learning modules
@@ -731,7 +736,7 @@ In this section you can find tips on how to troubleshoot your lab.
 
 ---
 
-#### Troubleshooting Module 1
+#### Troubleshooting the local deployment
 
 **If the application fails to start:**
 1. Check Docker is running: `docker ps`
@@ -745,7 +750,7 @@ In this section you can find tips on how to troubleshoot your lab.
 
 ---
 
-#### Troubleshooting Module 4
+#### Troubleshooting the application in AKS
 
 If for some reason you've made here and your deployment did not work, your deployment file should ressemble this example.
 
