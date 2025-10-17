@@ -55,10 +55,53 @@ To begin, log into the virtual machine using the following credentials: +++@lab.
 	az login
 	```
 1. click on the URL in the terminal. This will open a new tab in Edge.
+	!IMAGE[az-cli-click-url.png](instructions310381/az-cli-click-url.png)
 
 1. Pick your user account to finish logging in.
 
 	!IMAGE[az-cli-login2.png](instructions310381/az-cli-login2.png)
+
+1. Back in the terminal window, press **Enter** to select the current subscription
+
+---
+
+### Install the Service Connector
+
+1. In a terminal, run the following command to install the service-connector:
+
+```bash
+az extension add --name serviceconnector-passwordless --upgrade
+
+az aks connection create postgres-flexible \
+--source-id @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId] \
+--target-id @lab.CloudResourceTemplate(LAB502).Outputs[postgresDatabaseId] \
+--workload-identity @lab.CloudResourceTemplate(LAB502).Outputs[userAssignedIdentityId] \
+--client-type none \
+--kube-namespace default
+```
+---
+
+### Configure Azure RBAC Authentication for kubectl
+
+Before deploying to AKS, you need to configure kubectl to use Azure RBAC authentication.
+
+1. In your terminal window, run the following commands:
+
+```bash
+# add Admin to your user
+az role assignment create --assignee @lab.CloudPortalCredential(User1).Username --role "Azure Kubernetes Service RBAC Cluster Admin" --scope  @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId]
+
+# Get AKS credentials (this downloads the kubeconfig)
+az aks get-credentials --resource-group  @lab.CloudResourceGroup(myResourceGroup).Name --name @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterName]
+
+# Configure kubectl to use Azure RBAC authentication
+kubelogin convert-kubeconfig --login azurecli
+
+# Test AKS access
+kubectl get pods
+```
+
+> [!note] The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
 
 ---
 
@@ -68,11 +111,15 @@ To use GitHub Copilot, sign in with the GitHub account provided in your lab envi
 
 1. In Edge, open +++https://github.com/enterprises/skillable-events/sso+++
 
-1. Log in with the credentials listed in the **Resources** tab.
+1. Click on **Continue**
+
+	!IMAGE[continue-with-github.png](instructions310381/continue-with-github.png)
+
+3. 1. Log in with the credentials listed in the **Resources** tab.
 
 ### Sign In to VS Code with GitHub
 
-After signing in to GitHub, return to VS Code and complete the Copilot setup:
+After signing in to GitHub, open VS Code and complete the Copilot setup:
 
 1. Click the **account icon** (bottom right) → **Sign in to use Copilot.**
 
@@ -98,39 +145,8 @@ After signing in to GitHub, return to VS Code and complete the Copilot setup:
 
 	!IMAGE[github-claude.png](instructions310381/github-claude.png)
 
-### Install the Service Connector
-
-```bash
-az extension add --name serviceconnector-passwordless --upgrade
-
-az aks connection create postgres-flexible \
---source-id @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId] \
---target-id @lab.CloudResourceTemplate(LAB502).Outputs[postgresDatabaseId] \
---workload-identity @lab.CloudResourceTemplate(LAB502).Outputs[userAssignedIdentityId] \
---client-type none \
---kube-namespace default
-```
-
-### Configure Azure RBAC Authentication for kubectl
-
-Before deploying to AKS, you need to configure kubectl to use Azure RBAC authentication:
-
-```bash
-# add Admin to your user
-az role assignment create --assignee @lab.CloudPortalCredential(User1).Username --role "Azure Kubernetes Service RBAC Cluster Admin" --scope  @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId]
-
-# Get AKS credentials (this downloads the kubeconfig)
-az aks get-credentials --resource-group  @lab.CloudResourceGroup(myResourceGroup).Name --name @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterName]
-
-# Configure kubectl to use Azure RBAC authentication
-kubelogin convert-kubeconfig --login azurecli
-
-# Test AKS access
-kubectl get pods
-```
-
-> [!note] The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
-
+1. Close VS Code. 
+ 
 #### You're Ready to Begin
 
 Your environment is now configured. Next, you'll verify the local PetClinic application and begin the migration and modernization journey.
@@ -147,21 +163,10 @@ Your environment is now configured. Next, you'll verify the local PetClinic appl
 
 ### Verify the Application
 
-1. Run the local postgres database
-
-	```bash
-	 docker run --name "petclinic-postgres" \
-      -e POSTGRES_DB=petclinic \
-      -e POSTGRES_USER=petclinic \
-      -e POSTGRES_PASSWORD=petclinic \
-      -p 5432:5432 \
-      -d postgres:15
-	```
-
 1. Run the petclinic
 
 	```bash
-	mvn spring-boot:run \
+	 mvn clean compile && mvn spring-boot:run \
     -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none"
 	```
 
@@ -193,7 +198,7 @@ Once it's running, try out the key features:
 
 Next, let's open the Petclinic project in a new instance of VS Code and begin our modernization work. 
 
-1. In VS Code, open a terminal and run the following command to launch a new VS Code instance into the `spring-petclinic` source directory:
+1. In your terminal, run the following command to launch a new VS Code instance into the `spring-petclinic` source directory:
    
 	```bash
 	cd ~/spring-petclinic
@@ -519,7 +524,7 @@ Build the containerized application and push it to your Azure Container Registry
 1. Login to ACR using Azure CLI
 
 	```bash
-	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]
+	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrName]
   
 	```
 
@@ -602,10 +607,10 @@ Apply the Kubernetes manifests to deploy the application:
 1.  Monitor deployment status
 
 	```bash
-	kubectl get pods,services,deployments -w
+	kubectl get pods,services,deployments
 	```
 
-	It might take a minute for the AKS Automatic cluster to provision new nodes for the workload so it is normal to see your pods in a `Pending` state until the new nodes are available:
+	It might take a minute for the AKS Automatic cluster to provision new nodes for the workload so it is normal to see your pods in a `Pending` state until the new nodes are available. You can verify is there are nodes available with the `kubectl get nodes` command.
 
 	```bash
 	NAME                                    READY   STATUS              RESTARTS   AGE
@@ -750,109 +755,127 @@ If for some reason you've made here and your deployment did not work, your deplo
 > - `image: <acr-login-server>/petclinic:0.0.1` this should point to your ACR and image created earlier.
 
 ```yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: petclinic
-spec:
-  type: LoadBalancer
-  ports:
-    - port: 80
-      targetPort: 8080
-  selector:
-    app: petclinic
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petclinic
+  name: spring-petclinic
   labels:
-    app: petclinic
+    app: spring-petclinic
+    version: v1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: petclinic
+      app: spring-petclinic
   template:
     metadata:
       labels:
-        app: petclinic
-        azure.workload.identity/use: "true"
+        app: spring-petclinic
+        version: v1
+        azure.workload.identity/use: "true"  # Enable Azure Workload Identity
     spec:
-      serviceAccountName: sc-account-XXXXXXXXXX
+      serviceAccountName: sc-account-71b8f72b-9bed-472a-8954-9b946feee95c # change this
       containers:
-        - name: workload
-          image: $ACR_LOGIN_SERVER/petclinic:0.0.1
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: postgres
-            - name: AZURE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.cloud.azure.credential.client-id
-            - name: AZURE_MANAGED_IDENTITY_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.cloud.azure.credential.client-id
-            - name: SPRING_CLOUD_AZURE_CREDENTIAL_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.cloud.azure.credential.client-id
-            - name: SPRING_CLOUD_AZURE_CREDENTIAL_MANAGED_IDENTITY_ENABLED
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.cloud.azure.credential.managed-identity-enabled
-            - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.datasource.azure.passwordless-enabled
-            - name: SPRING_DATASOURCE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.datasource.url
-            - name: SPRING_DATASOURCE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: sc-pg-secret
-                  key: spring.datasource.username
-          envFrom:
-            - secretRef:
-                name: sc-pg-secret
-          volumeMounts:
-            - name: config-volume
-              mountPath: /app/config
-              readOnly: true
-          ports:
-            - name: http
-              containerPort: 8080
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 30
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            timeoutSeconds: 30
-            failureThreshold: 3
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
+      - name: spring-petclinic
+        image: acrpetclinic556325.azurecr.io/petclinic:0.0.1 # change this value
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        
+        # Environment variables from Azure Service Connector secret
+        env:
+        # Azure Workload Identity - automatically injected by webhook
+        # AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_FEDERATED_TOKEN_FILE are set by workload identity
+        
+        # Map PostgreSQL host from secret - with Azure AD authentication parameters
+        - name: POSTGRES_URL
+          value: "jdbc:postgresql://$(AZURE_POSTGRESQL_HOST):$(AZURE_POSTGRESQL_PORT)/$(AZURE_POSTGRESQL_DATABASE)?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_USERNAME
+        # Client ID is also needed for Spring Cloud Azure
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_CLIENTID
+              optional: true
+        - name: AZURE_MANAGED_IDENTITY_NAME
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_CLIENTID
+        - name: AZURE_POSTGRESQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_HOST
+        - name: AZURE_POSTGRESQL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_PORT
+        - name: AZURE_POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: sc-postgresflexible4q7w6-secret # change this value
+              key: AZURE_POSTGRESQL_DATABASE
+        - name: SPRING_PROFILES_ACTIVE
+          value: "postgres"
+        # Spring Cloud Azure configuration for workload identity
+        - name: SPRING_CLOUD_AZURE_CREDENTIAL_MANAGED_IDENTITY_ENABLED
+          value: "true"
+        - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+          value: "true"        
+        # Make all secret keys available in the pod
+        envFrom:
+        - secretRef:
+            name: sc-postgresflexible4q7w6-secret # change this value
+        # Health check probes
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      # Pod security context
+      securityContext:
+        fsGroup: 1000
+      # Restart policy
+      restartPolicy: Always
 ```
