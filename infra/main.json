@@ -174,7 +174,7 @@
     {
       "type": "Microsoft.ContainerRegistry/registries",
       "apiVersion": "2023-07-01",
-      "name": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))]",
+      "name": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))]",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Basic"
@@ -253,15 +253,15 @@
     {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4)))]",
-      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))), 'AcrPull')]",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6)))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))), 'AcrPull')]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
         "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-08-02-preview').identityProfile.kubeletidentity.objectId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4)))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6)))]",
         "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
       ]
     },
@@ -324,11 +324,11 @@
     },
     "acrName": {
       "type": "string",
-      "value": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))]"
+      "value": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))]"
     },
     "acrLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 4))), '2023-07-01').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))), '2023-07-01').loginServer]"
     },
     "userAssignedIdentityId": {
       "type": "string",
