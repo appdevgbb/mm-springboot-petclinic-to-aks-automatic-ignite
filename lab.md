@@ -13,7 +13,7 @@ By the end of this workshop, you will be able to:
 - Run [Spring Boot PetClinic](https://github.com/spring-projects/spring-petclinic) locally with PostgreSQL and basic authentication.  
 - Modernize the codebase using [GitHub Copilot app modernization](https://marketplace.visualstudio.com/items?itemName=vscjava.migrate-java-to-azure).  
 - Migrate the database to [Azure PostgreSQL Flexible Server](https://learn.microsoft.com/azure/postgresql/flexible-server/) integrated with [Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/active-directory/).  
-- Containerize the app using [Containerization Assist MCP Server](https://www.npmjs.com/package/containerization-assist-mcp?activeTab=readme).  
+- Containerize the app using [Containerization Assist MCP Server](https://github.com/Azure/containerization-assist).  
 - Deploy to [AKS Automatic](https://learn.microsoft.com/azure/aks/automatic/) using [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) and [Service Connector](https://learn.microsoft.com/en-us/azure/service-connector/).
 
 ---
@@ -477,7 +477,7 @@ The tool includes intelligent error detection capabilities that automatically id
 
 **What You'll Do:** Use AI-powered tools to generate Docker and Kubernetes manifests for your modernized Spring Boot application.
 
-**What You'll Learn:** How to create production-ready containerization assets — including optimized Dockerfiles and Kubernetes manifests configured with health checks, secrets, and workload identity.
+**What You'll Learn:** How to create production-ready containerization assets - including optimized Dockerfiles and Kubernetes manifests configured with health checks, secrets, and workload identity.
 
 ---
 
@@ -537,7 +537,7 @@ The Azure Portal will display a YAML snippet showing how to use the Service Conn
 In the GitHub Copilot agent chat, use the following prompt to generate production-ready Docker and Kubernetes manifests:
 
 ```prompt
-Help me containerize the application at ./src and generate Kubernetes deployment artifacts using Containerization Assist. Put all of the kubernetes files in a directory called k8s. PostgreSQL Configuration via Azure Service Connector.
+Help me containerize the application at ./src and generate Kubernetes deployment artifacts using Containerization Assist. Put all of the kubernetes files in a directory called k8s. Save the deployment and service into a single file called petclinic.yaml. Do not create any deployment scripts for this. The AKS Automatic cluster will connect to PostgreSQL via Azure Service Connector without using a password.
 ```
 
 > [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace. Select **Allow in this Workspace** or **Always Allow**.
@@ -557,6 +557,9 @@ The Containerization Assist MCP Server will analyze your repository and generate
 - **Kubernetes Service**: LoadBalancer configuration for external access
 
 **Expected Result**: Kubernetes manifests in the `k8s/` directory.
+
+> [!tip] You are almost there. You will deploy the AI generated files, but they might need some tuning later. Before deploying it to your cluster, double check the image location, the use of workload identity and if the service connector secret reference in the deployment file are correct to your environment.
+
 
 ### Build and Push Container Image to ACR
 
