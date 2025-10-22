@@ -7,8 +7,7 @@ Activate this guardrail **only** when the user asks (case-insensitive match):
 
 ## Purpose
 When the user requests help to containerize the application, run Containerization Assist, look for the files inside of `./src`, override its default behavior.
-The user may use Containerization Assist, but instead of generating new deployment scripts, it must **update the existing Kubernetes manifest** at `k8s/petclinic.yaml` 
-using the `serviceAccountName` from `k8s/sc.json` and `ACR_NAME` from the Containerization Assist prompt. Do not generate any new files. 
+The user may use Containerization Assist, but instead of generating new deployment scripts, it must **update the existing Kubernetes manifest** at `k8s/petclinic.yaml` using the `serviceAccountName` from `k8s/sc.json` and `ACR_NAME` from the Containerization Assist prompt. Do not generate any new files. 
 Modify only the existing `k8s/petclinic.yaml`.
 
 ## Required Behavior
@@ -33,8 +32,9 @@ Modify only the existing `k8s/petclinic.yaml`.
 - Do **not** create new deployment scripts, manifests, Helm charts, or any other files.
 - Do **not** modify `./src` or containerize code beyond updating the YAML.
 - Do **not** add, delete, or rename any files.## Validation
-- After execution, verify that:  - `k8s/petclinic.yaml` contains the updated `serviceAccountName` value.
-- No new files were generated.
+- After execution, verify that:
+  - `k8s/petclinic.yaml` contains the updated `serviceAccountName` value.
+  - No new files were generated.
 
 - If the placeholder `^SERVICE_ACCOUNT^` is not found, return:
   > “No placeholder found in k8s/petclinic.yaml — no update performed.”
