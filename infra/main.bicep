@@ -55,7 +55,7 @@ resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@
 
 // Log Analytics Workspace for AKS monitoring
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'law-petclinic${substring(nameSuffix, 0, 4)}'
+  name: 'law-petclinic${nameSuffix}'
   location: resourceGroup().location
   properties: {
     sku: {
@@ -68,7 +68,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 
 // PostgreSQL Flexible Server with Development profile
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
-  name: '${postgresServerName}${substring(nameSuffix, 0, 4)}'
+  name: '${postgresServerName}${nameSuffix}'
   location: resourceGroup().location
   sku: {
     name: 'Standard_B1ms' // Development profile - Burstable tier
@@ -118,7 +118,7 @@ resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2
 
 // Azure Container Registry
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: '${acrName}${substring(nameSuffix, 0, 4)}'
+  name: '${acrName}${nameSuffix}'
   location: resourceGroup().location
   sku: {
     name: 'Basic'

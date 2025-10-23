@@ -1,1 +1,129 @@
-apiVersion: apps/v1kind: Deploymentmetadata:  name: spring-petclinic  labels:    app: spring-petclinic    version: v1spec:  replicas: 1  selector:    matchLabels:      app: spring-petclinic  template:    metadata:      labels:        app: spring-petclinic        version: v1        azure.workload.identity/use: "true"    spec:      serviceAccountName: ^SERVICE_ACCOUNT^ # change this      containers:      - name: spring-petclinic        image: ^ACRNAME^/petclinic:0.0.1 # change this value        imagePullPolicy: IfNotPresent        ports:        - containerPort: 8080          name: http          protocol: TCP        env:        - name: POSTGRES_URL          value: "jdbc:postgresql://$(AZURE_POSTGRESQL_HOST):$(AZURE_POSTGRESQL_PORT)/$(AZURE_POSTGRESQL_DATABASE)?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin"        - name: POSTGRES_USER          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_USERNAME        - name: AZURE_CLIENT_ID          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_CLIENTID              optional: true        - name: AZURE_MANAGED_IDENTITY_NAME          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_CLIENTID        - name: AZURE_POSTGRESQL_HOST          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_HOST        - name: AZURE_POSTGRESQL_PORT          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_PORT        - name: AZURE_POSTGRESQL_DATABASE          valueFrom:            secretKeyRef:              name: sc-pg-secret              key: AZURE_POSTGRESQL_DATABASE        - name: SPRING_PROFILES_ACTIVE          value: "postgres"        - name: SPRING_CLOUD_AZURE_CREDENTIAL_MANAGED_IDENTITY_ENABLED          value: "true"        - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED          value: "true"                envFrom:        - secretRef:            name: sc-pg-secret        livenessProbe:          httpGet:            path: /actuator/health            port: 8080            scheme: HTTP          initialDelaySeconds: 60          periodSeconds: 10          timeoutSeconds: 3          successThreshold: 1          failureThreshold: 3        readinessProbe:          httpGet:            path: /actuator/health            port: 8080            scheme: HTTP          initialDelaySeconds: 30          periodSeconds: 5          timeoutSeconds: 3          successThreshold: 1          failureThreshold: 3        # Resource limits and requests        resources:          requests:            memory: "512Mi"            cpu: "500m"          limits:            memory: "1Gi"            cpu: "1000m"        # Security context        securityContext:          runAsNonRoot: true          runAsUser: 1000          allowPrivilegeEscalation: false          readOnlyRootFilesystem: false          capabilities:            drop:            - ALL      # Pod security context      securityContext:        fsGroup: 1000      # Restart policy      restartPolicy: Always---apiVersion: v1kind: Servicemetadata:  name: spring-petclinic-service  labels:    app: spring-petclinic    version: v1spec:  selector:    app: spring-petclinic    version: v1  ports:  - port: 8080    targetPort: 8080    protocol: TCP
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-petclinic
+  labels:
+    app: spring-petclinic
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-petclinic
+  template:
+    metadata:
+      labels:
+        app: spring-petclinic
+        version: v1
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: ^SERVICE_ACCOUNT^ # change this
+      containers:
+      - name: spring-petclinic
+        image: ^ACRNAME^/petclinic:0.0.1 # change this value
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: POSTGRES_URL
+          value: "jdbc:postgresql://$(AZURE_POSTGRESQL_HOST):$(AZURE_POSTGRESQL_PORT)/$(AZURE_POSTGRESQL_DATABASE)?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_USERNAME
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_CLIENTID
+              optional: true
+        - name: AZURE_MANAGED_IDENTITY_NAME
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_CLIENTID
+        - name: AZURE_POSTGRESQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_HOST
+        - name: AZURE_POSTGRESQL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_PORT
+        - name: AZURE_POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: sc-pg-secret
+              key: AZURE_POSTGRESQL_DATABASE
+        - name: SPRING_PROFILES_ACTIVE
+          value: "postgres"
+        - name: SPRING_CLOUD_AZURE_CREDENTIAL_MANAGED_IDENTITY_ENABLED
+          value: "true"
+        - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+          value: "true"
+        envFrom:
+        - secretRef:
+            name: sc-pg-secret
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      # Pod security context
+      securityContext:
+        fsGroup: 1000
+      # Restart policy
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-petclinic-service
+  labels:
+    app: spring-petclinic
+    version: v1
+spec:
+  selector:
+    app: spring-petclinic
+    version: v1
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP

@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.38.33.27573",
-      "templateHash": "17069115767663611528"
+      "version": "0.37.4.10188",
+      "templateHash": "18179312281179393435"
     }
   },
   "parameters": {
@@ -108,7 +108,7 @@
     {
       "type": "Microsoft.OperationalInsights/workspaces",
       "apiVersion": "2023-09-01",
-      "name": "[format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4))]",
+      "name": "[format('law-petclinic{0}', parameters('nameSuffix'))]",
       "location": "[resourceGroup().location]",
       "properties": {
         "sku": {
@@ -121,7 +121,7 @@
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers",
       "apiVersion": "2024-08-01",
-      "name": "[format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))]",
+      "name": "[format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix'))]",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Standard_B1ms",
@@ -149,32 +149,32 @@
       "condition": "[parameters('deployAzureRBACForCurrentUser')]",
       "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
       "apiVersion": "2024-11-01-preview",
-      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('azureADObjectId'))]",
+      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')), parameters('azureADObjectId'))]",
       "properties": {
         "principalName": "[parameters('azureADUserPrincipalName')]",
         "principalType": "User",
         "tenantId": "[subscription().tenantId]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')))]"
       ]
     },
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
       "apiVersion": "2024-08-01",
-      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('postgresDatabaseName'))]",
+      "name": "[format('{0}/{1}', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')), parameters('postgresDatabaseName'))]",
       "properties": {
         "charset": "UTF8",
         "collation": "en_US.utf8"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')))]"
       ]
     },
     {
       "type": "Microsoft.ContainerRegistry/registries",
       "apiVersion": "2023-07-01",
-      "name": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))]",
+      "name": "[format('{0}{1}', parameters('acrName'), parameters('nameSuffix'))]",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Basic"
@@ -230,7 +230,7 @@
           "omsAgent": {
             "enabled": true,
             "config": {
-              "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4)))]",
+              "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', parameters('nameSuffix')))]",
               "useAADAuth": "true"
             }
           }
@@ -247,21 +247,21 @@
       },
       "tags": "[parameters('tags')]",
       "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', substring(parameters('nameSuffix'), 0, 4)))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('law-petclinic{0}', parameters('nameSuffix')))]"
       ]
     },
     {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6)))]",
-      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))), 'AcrPull')]",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', format('{0}{1}', parameters('acrName'), parameters('nameSuffix')))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), parameters('nameSuffix'))), 'AcrPull')]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
         "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName')), '2025-08-02-preview').identityProfile.kubeletidentity.objectId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6)))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), parameters('nameSuffix')))]",
         "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
       ]
     },
@@ -304,15 +304,15 @@
     },
     "postgresServerId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)))]"
+      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')))]"
     },
     "postgresServerName": {
       "type": "string",
-      "value": "[format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))]"
+      "value": "[format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix'))]"
     },
     "postgresServerFqdn": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4))), '2024-08-01').fullyQualifiedDomainName]"
+      "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix'))), '2024-08-01').fullyQualifiedDomainName]"
     },
     "postgresDatabaseName": {
       "type": "string",
@@ -320,15 +320,15 @@
     },
     "postgresDatabaseId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', format('{0}{1}', parameters('postgresServerName'), substring(parameters('nameSuffix'), 0, 4)), parameters('postgresDatabaseName'))]"
+      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', format('{0}{1}', parameters('postgresServerName'), parameters('nameSuffix')), parameters('postgresDatabaseName'))]"
     },
     "acrName": {
       "type": "string",
-      "value": "[format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))]"
+      "value": "[format('{0}{1}', parameters('acrName'), parameters('nameSuffix'))]"
     },
     "acrLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), substring(parameters('nameSuffix'), 0, 6))), '2023-07-01').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('{0}{1}', parameters('acrName'), parameters('nameSuffix'))), '2023-07-01').loginServer]"
     },
     "userAssignedIdentityId": {
       "type": "string",
