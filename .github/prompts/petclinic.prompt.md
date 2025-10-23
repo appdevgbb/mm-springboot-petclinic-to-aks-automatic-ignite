@@ -36,7 +36,9 @@ Modify only the existing [k8s/petclinic.yaml](../'k8s/petclinic.yaml').
 - Preserve all formatting, comments, and structure of the YAML.
 - Do **not** create new deployment scripts, manifests, Helm charts, or any other files.
 - Do **not** modify [/src]('../src') or containerize code beyond updating the YAML.
-- Do **not** add, delete, or rename any files.## Validation
+- Do **not** add, delete, or rename any files.
+
+## Validation
 - After execution, verify that:
   - [k8s/petclinic.yaml]('../k8s/petclinic.yaml') contains the updated `serviceAccountName` value.
   - No new files were generated.
