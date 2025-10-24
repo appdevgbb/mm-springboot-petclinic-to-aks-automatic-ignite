@@ -72,17 +72,14 @@ To begin, log into the virtual machine using the following credentials: +++@lab.
 ```bash
 az extension add --name serviceconnector-passwordless --upgrade
 
-az aks connection create postgres-flexible \
---source-id @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId] \
---target-id @lab.CloudResourceTemplate(LAB502).Outputs[postgresDatabaseId] \
---workload-identity @lab.CloudResourceTemplate(LAB502).Outputs[userAssignedIdentityId] \
---client-type none \
---kube-namespace default
+nohup bash -c 'az aks connection create postgres-flexible --connection pg --source-id @lab.CloudResourceTemplate(LAB502).Outputs[aksClusterId] --target-id @lab.CloudResourceTemplate(LAB502).Outputs[postgresDatabaseId] --workload-identity @lab.CloudResourceTemplate(LAB502).Outputs[userAssignedIdentityId] --client-type none --kube-namespace default | tee ~/spring-petclinic/k8s/sc.json' > ~/spring-petclinic/k8s/sc.log 2>&1 &
 ```
 
+> [!note] This script will log its output into the **~/spring-petclinic/k8s/sc.log** file. You can check for its progress opening that file.
 
+<!-- 
 > [!note] This command will take about 8 minutes to run. To make most of your time on this lab, you can leave it running on this terminal until it finishes. You can open a new tab in the Windows Terminal by clicking on the plus sign and proceed to the next step on this lab.
-> !IMAGE[new-tab.png](instructions310381/new-tab.png)
+> !IMAGE[new-tab.png](instructions310381/new-tab.png) -->
 
 ---
 
@@ -103,7 +100,7 @@ az aks get-credentials --resource-group  @lab.CloudResourceGroup(myResourceGroup
 kubelogin convert-kubeconfig --login azurecli
 
 # Test AKS access
-kubectl get pods
+kubectl get nodes
 ```
 
 > [!note] The `kubelogin convert-kubeconfig --login azurecli` command configures kubectl to use Entra (Azure AD) authentication with the Azure RBAC roles assigned to your user account. This is required for AKS Automatic clusters with Azure RBAC enabled.
@@ -120,7 +117,7 @@ To use GitHub Copilot, sign in with the GitHub account provided in your lab envi
 
 	!IMAGE[continue-with-github.png](instructions310381/continue-with-github.png)
 
-3. 1. Log in with the credentials listed in the **Resources** tab.
+1. Log in with the credentials listed in the **Resources** tab.
 
 ### Sign In to VS Code with GitHub
 
@@ -182,7 +179,7 @@ Your environment is now configured. Next, you'll verify the local PetClinic appl
     -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none"
 	```
 
-1. Open your browser and go to http://localhost:8080 to confirm the PetClinic application is running.
+1. Open your browser and go to `http://localhost:8080` to confirm the PetClinic application is running.
 
 !IMAGE[peclinic.png](instructions310381/peclinic.png)
 
@@ -224,7 +221,7 @@ Now that you have GitHub Copilot setup, you can use the assessment tool to analy
 
 	!IMAGE[module2-step2-extension-interface.png](instructions310381/module2-step2-extension-interface.png)
 
-1. Allow the GitHub Copilot app modernization to sign in to GitHub 
+<!-- 1. Allow the GitHub Copilot app modernization to sign in to GitHub 
 	!IMAGE[ghcp-allow-signin.png](instructions310381/ghcp-allow-signin.png)
 
 1. Authorize your user to sign in
@@ -237,14 +234,14 @@ Now that you have GitHub Copilot setup, you can use the assessment tool to analy
 
 1. The assessment will start now. Notice that GitHub will install the AppCAT CLI for Java. This might take a few minutes
 
-	!IMAGE[appcat-install.png](instructions310381/appcat-install.png)
+	!IMAGE[appcat-install.png](instructions310381/appcat-install.png) -->
 
 > [!hint] You can follow the progress of the upgrade by looking at the Terminal in vscode
 !IMAGE[assessment-rules.png](instructions310381/assessment-rules.png)
 
-Also note that you might be prompted to allow access to the language models provided by GitHub Copilot Chat. Click on **Allow**
+<!-- Also note that you might be prompted to allow access to the language models provided by GitHub Copilot Chat. Click on **Allow**
 
-!IMAGE[ghcp-allow-llm.png](instructions310381/ghcp-allow-llm.png)
+!IMAGE[ghcp-allow-llm.png](instructions310381/ghcp-allow-llm.png) -->
 
 ### Overview of the Assessment
 
@@ -277,23 +274,23 @@ Choose how deep AppCAT should inspect the project.
 | source-only | Fast analysis that examines source code only. |
 | full | Full analysis: inspects source code and scans dependencies (slower, more thorough). |
 
-**Where to change these options**
-
-Edit the file at `.github/appmod-java/appcat/assessment-config.yaml` to change targets and modes.
-
-For this lab, AppCAT runs with the following configuration:
-
-```yaml
-appcat:
-  - target:
-      - azure-aks
-      - azure-appservice
-      - azure-container-apps
-      - cloud-readiness
-    mode: source-only
-```
-
-If you want a broader scan (including dependency checks) change `mode` to `full`, or add/remove entries under `target` to focus recommendations on a specific runtime or Azure compute service.
+> [!knowledge]  **Where to change these options**
+>
+> You can customize this report by editing the file at **.github/appmod-java/appcat/assessment-config.yaml** to change targets and modes.
+>
+>For this lab, AppCAT runs with the following configuration:
+>
+>```yaml
+>appcat:
+>  - target:
+>      - azure-aks
+>      - azure-appservice
+>      - azure-container-apps
+>      - cloud-readiness
+>    mode: source-only
+>```
+>
+>If you want a broader scan (including dependency checks) change `mode` to `full`, or add/remove entries under `target` to focus recommendations on a specific runtime or Azure compute service.
 
 ### Review the Assessment results
 
@@ -451,9 +448,9 @@ After implementing the migration changes, the App Modernization tool automatical
 | 3 | **Consistency Validation** | Ensures all configuration files are properly updated and consistent.
 | 4 | **Test Validation** | Executes application tests to verify functionality remains intact.
 
-During these stages, you might be prompted to allow the **GitHub Copilot app modernization** extension to access GitHub. Allow it and select your user account when asked.
-
-!IMAGE[allow-ghcp-cve.png](instructions310381/allow-ghcp-cve.png)
+> [!note] During these stages, you might be prompted to allow the **GitHub Copilot app modernization** extension to access GitHub. Allow it and select your user account when asked.
+>
+>!IMAGE[allow-ghcp-cve.png](instructions310381/allow-ghcp-cve.png)
 
 **Automated Error Detection and Resolution:**
 
@@ -481,63 +478,12 @@ The tool includes intelligent error detection capabilities that automatically id
 
 ---
 
-### Retrieve PostgreSQL Configuration from AKS Service Connector
-
-Before you can use **Containerization Assist**, you must first retrieve the PostgreSQL Service Connector configuration from your AKS cluster.
-
-This information ensures that your generated Kubernetes manifests are correctly wired to the database using managed identity and secret references.
-
-### Access AKS Service Connector and Retrieve PostgreSQL Configuration
-
-1. Open a new tab in the Edge browser and navigate to +++https://portal.azure.com/+++
-
-1. Sign in to Azure using your lab provided credentials available in the **Resources** tab.
-
-1. In the top search bar, type **aks-petclinic** and select the AKS Automic cluster.
-
-	!IMAGE[select-aks-petclinic.png](instructions310381/select-aks-petclinic.png)
-
-1. In the left-hand menu under **Settings**, select **Service Connector**.
-
-	!IMAGE[select-sc.jpg](instructions310381/select-sc.jpg)
-
-1.  You'll see the service connection that was automatically created **PostgreSQL connection** with a name that starts with **postgresflexible_** connecting to your PostgreSQL flexible server.
-
-1. Select the **DB for PostgreSQL flexible server** and click the **YAML snipper** button in the action bar
-
-	!IMAGE[yaml-snippet.png](instructions310381/yaml-snippet.png)
-
-1. Expand this connection to see the variables that were created by the `sc-postgresflexiblebft3u-secret` in the cluster
-
-	!IMAGE[sc-variables.png](instructions310381/sc-variables.png)
-
-### Retrieve PostgreSQL YAML Configuration
-
-The Azure Portal will display a YAML snippet showing how to use the Service Connector secrets for PostgreSQL connectivity.
-> [+] Service Connector YAML snippet
-> 
-> !IMAGE[sample-yaml.jpg](instructions310381/sample-yaml.jpg)
-
-> [!note] 
-> 1. The portal shows a sample deployment with workload identity configuration
-> 2. Key Elements:
->   - Service account: `sc-account-d4157fc8-73b5-4a68-acf4-39c8f22db792`
->   - Secret reference: `sc-postgresflexiblebft3u-secret`
->   - Workload identity label: `azure.workload.identity/use: "true"`
-> 
-> The Service Connector secret (`sc-postgresflexiblebft3u-secret` in this example), will contain the following variables:
-- AZURE_POSTGRESQL_HOST
-- AZURE_POSTGRESQL_PORT
-- AZURE_POSTGRESQL_DATABASE
-- AZURE_POSTGRESQL_CLIENTID (map to both AZURE_CLIENT_ID and AZURE_MANAGED_IDENTITY_NAME)
-- AZURE_POSTGRESQL_USERNAME
-
 ### Using Containerization Assist
 
 In the GitHub Copilot agent chat, use the following prompt to generate production-ready Docker and Kubernetes manifests:
 
 ```prompt
-Help me containerize the application at ./src and generate Kubernetes deployment artifacts using Containerization Assist. Put all of the kubernetes files in a directory called k8s. Save the deployment and service into a single file called petclinic.yaml. Do not create any deployment scripts for this. The AKS Automatic cluster will connect to PostgreSQL via Azure Service Connector without using a password.
+/petclinic Help me containerize the application. Create me a new Dockerfile and update my ACR with @lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]
 ```
 
 > [!note] To expedite your lab experience, you can allow the Containerization Assist MCP server to run on this Workspace. Select **Allow in this Workspace** or **Always Allow**.
@@ -565,7 +511,7 @@ The Containerization Assist MCP Server will analyze your repository and generate
 
 Build the containerized application and push it to your Azure Container Registry:
 
-1. Login to ACR using Azure CLI
+1. In your terminal window, login to ACR using Azure CLI
 
 	```bash
 	az acr login --name @lab.CloudResourceTemplate(LAB502).Outputs[acrName]
@@ -592,19 +538,14 @@ Build the containerized application and push it to your Azure Container Registry
 
 ### Deploy the application to AKS Automatic
 
-Apply the Kubernetes manifests to deploy the application:
+Using Containerization Assist we have built a Kubernetes manifest for the Petclini application. In the next steps we will deploy it to the AKS Automatic cluster and verify that it is working:
 
-1. Update the image name in your deployment manifest with your ACR login server. You can retrieve the name of your Azure Container Registry with this command:
-
-	```bash
-	@lab.CloudResourceTemplate(LAB502).Outputs[acrLoginServer]/petclinic:0.0.1
-	```
-
-1. Apply the deployment manifest
+1. Deploy the application:
 
 	```bash
 	kubectl apply -f k8s/petclinic.yaml
 	```
+
 1.  Monitor deployment status
 
 	```bash
@@ -616,7 +557,6 @@ Apply the Kubernetes manifests to deploy the application:
 	```bash
 	NAME                                    READY   STATUS              RESTARTS   AGE
 	petclinic-deployment-5f9db48c65-qpb8l   0/1     Pending             0          2m2s
-	petclinic-deployment-5f9db48c65-vqb8x   0/1     Pending             0          2m2s
 	```
 
 ### Verify Deployment and Connectivity
@@ -626,24 +566,10 @@ Test the deployed application and verify Entra ID authentication:
 1. Port forward to access the application
 
 	```bash
-	kubectl port-forward svc/petclinic-service 8080:80
+  kubectl port-forward svc/spring-petclinic-service 9090:8080
 	```
-1. Test the application (in another terminal)
+1. To test the application, open a new tab in Microsoft Edge and go to `http://localhost:9090`
 
-	```bash
-	curl http://localhost:8080
-	```
-
-1. Check pod logs for successful database connections
-
-	```bash
-	kubectl logs -l app=petclinic
-	```
-1. Verify health endpoints
-
-	```bash
-	curl http://localhost:8080/actuator/health
-	```
 
 ### Validate Entra ID Authentication
 
@@ -708,13 +634,6 @@ Verify that the application is using passwordless authentication:
 
 ### Next Steps & Learning Paths
 
-
-**Immediate Next Steps:**
-
-- Explore the deployed application's monitoring and logging capabilities
-- Practice scaling the deployment using `kubectl scale`
-- Experiment with different environment configurations
-
 **Continue Your Azure Journey:**
 
 - [AKS Automatic Documentation](https://learn.microsoft.com/en-us/azure/aks/intro-aks-automatic) - Deep dive into automatic cluster management
@@ -750,6 +669,58 @@ In this section you can find tips on how to troubleshoot your lab.
 **If the database connection fails:**
 1. Verify PostgreSQL container is running on port 5432: `docker port petclinic-postgres`
 2. Test database connectivity: `docker exec -it petclinic-postgres psql -U petclinic -d petclinic -c "SELECT 1;"`
+
+---
+### Troubleshooting the Service Connector
+
+### Retrieve PostgreSQL Configuration from AKS Service Connector
+
+Before you can use **Containerization Assist**, you must first retrieve the PostgreSQL Service Connector configuration from your AKS cluster.
+
+This information ensures that your generated Kubernetes manifests are correctly wired to the database using managed identity and secret references.
+
+### Access AKS Service Connector and Retrieve PostgreSQL Configuration
+
+1. Open a new tab in the Edge browser and navigate to +++https://portal.azure.com/+++
+
+1. In the top search bar, type **aks-petclinic** and select the AKS Automic cluster.
+
+	!IMAGE[select-aks-petclinic.png](instructions310381/select-aks-petclinic.png)
+
+1. In the left-hand menu under **Settings**, select **Service Connector**.
+
+	!IMAGE[select-sc.jpg](instructions310381/select-sc.jpg)
+
+1.  You'll see the service connection that was automatically created **PostgreSQL connection** with a name that starts with **postgresflexible_** connecting to your PostgreSQL flexible server.
+
+1. Select the **DB for PostgreSQL flexible server** and click the **YAML snippet** button in the action bar
+
+	!IMAGE[yaml-snippet.png](instructions310381/yaml-snippet.png)
+
+1. Expand this connection to see the variables that were created by the `sc-postgresflexiblebft3u-secret` in the cluster
+
+	!IMAGE[sc-variables.png](instructions310381/sc-variables.png)
+
+### Retrieve PostgreSQL YAML Configuration
+
+The Azure Portal will display a YAML snippet showing how to use the Service Connector secrets for PostgreSQL connectivity.
+> [+] Service Connector YAML snippet
+> 
+> !IMAGE[sample-yaml.jpg](instructions310381/sample-yaml.jpg)
+
+> [!note] 
+> 1. The portal shows a sample deployment with workload identity configuration
+> 2. Key Elements:
+>   - Service account: `sc-account-d4157fc8-73b5-4a68-acf4-39c8f22db792`
+>   - Secret reference: `sc-postgresflexiblebft3u-secret`
+>   - Workload identity label: `azure.workload.identity/use: "true"`
+> 
+> The Service Connector secret (`sc-postgresflexiblebft3u-secret` in this example), will contain the following variables:
+- AZURE_POSTGRESQL_HOST
+- AZURE_POSTGRESQL_PORT
+- AZURE_POSTGRESQL_DATABASE
+- AZURE_POSTGRESQL_CLIENTID (map to both AZURE_CLIENT_ID and AZURE_MANAGED_IDENTITY_NAME)
+- AZURE_POSTGRESQL_USERNAME
 
 ---
 
