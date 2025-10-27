@@ -577,8 +577,20 @@ Verify that the application is using passwordless authentication:
 
 1. Check environment variables in the pod (get first pod with label)
 	```bash
-	POD_NAME=$(kubectl get pods -l app=petclinic -o jsonpath='{.items[0].metadata.name}')
+	POD_NAME=$(kubectl get pods -l app=spring-petclinic -o jsonpath='{.items[0].metadata.name}')
 	kubectl exec $POD_NAME -- env | grep POSTGRES
+	```
+
+	Expected output:
+
+	```bash
+	AZURE_POSTGRESQL_PORT=5432
+	AZURE_POSTGRESQL_DATABASE=petclinic
+	AZURE_POSTGRESQL_USERNAME=aad_pg
+	AZURE_POSTGRESQL_CLIENTID=1094a914-1837-406a-ad58-b9dcc499177a
+	AZURE_POSTGRESQL_HOST=db-petclinic55954159.postgres.database.azure.com
+	AZURE_POSTGRESQL_SSL=true
+	POSTGRES_USER=aad_pg
 	```
 
 1. Verify no password environment variables are present
@@ -587,10 +599,27 @@ Verify that the application is using passwordless authentication:
 	kubectl exec $POD_NAME -- env | grep -i pass
 	```
 
+	Expected output:
+  
+	```bash
+	SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true
+	```
+
 1. Check application logs for successful authentication
 
 	```bash
-	kubectl logs -l app=petclinic --tail=100 | grep -i "connected\|authenticated"
+	kubectl logs -l app=spring-petclinic --tail=100 | grep -i "hibernate"
+	```
+
+	Expected outcome:
+
+	```bash
+	[...]
+	Hibernate: drop table if exists pets cascade
+	Hibernate: drop table if exists specialties cascade
+	Hibernate: drop table if exists types cascade
+	Hibernate: drop table if exists vet_specialties cascade
+	[...]
 	```
 
 **Expected Outcome:** The application is successfully deployed to AKS with passwordless authentication to PostgreSQL using Entra ID and workload identity.
