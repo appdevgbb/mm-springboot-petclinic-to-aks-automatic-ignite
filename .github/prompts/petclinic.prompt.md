@@ -45,6 +45,8 @@ The user may use the "Containerization Assist" MCP Server tools, but instead of 
 - Do **not** create new deployment scripts, manifests, Helm charts, or any other files.
 - Do **not** modify [/src](../src) or containerize code beyond updating the YAML.
 - Do **not** add, delete, or rename any files unless its a Dockerfile.
+- You **must** only suggest the use of `az acr build` when building the docker image. You can tell the user to follow the instructions.
+- You **must** provide instructions to deploy the updated manifest using `kubectl apply -f k8s/petclinic.yaml`.
 
 ## Validation
 
