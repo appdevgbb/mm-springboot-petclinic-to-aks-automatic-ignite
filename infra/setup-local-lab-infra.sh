@@ -10,7 +10,7 @@ set -e
 
 ################################################################################
 FORK_URL=${1:-"https://github.com/spring-projects/spring-petclinic"}
-PETCLINIC_DIR="${HOME}/spring-petclinic"
+PETCLINIC_DIR="spring-petclinic"
 POSTGRES_CONTAINER="petclinic-postgres"
 APP_PORT=8080
 ################################################################################
@@ -57,16 +57,15 @@ printHeader() {
 }
 
 clonePetclinicRepo() {
-  echo "Cloning Spring Boot PetClinic repository to your home directory..."
-  cd ~
-  
+  echo "Cloning Spring Boot PetClinic repository..."
+
   if [ -d "spring-petclinic" ]; then
     echo "spring-petclinic directory already exists. Removing..."
     rm -rf "spring-petclinic"
   fi
-  
+
   git clone "${FORK_URL}" spring-petclinic
-  echo "Repository cloned successfully to ~/spring-petclinic!"
+  echo "Repository cloned successfully to ./spring-petclinic!"
   echo ""
 }
 
@@ -139,8 +138,6 @@ testLocalApplication() {
   echo "Build successful!"
 
   echo "Starting application (this will run in background)..."
-  cd "${PETCLINIC_DIR}"
-  
   nohup mvn spring-boot:run \
     -Dspring-boot.run.arguments="--spring.messages.basename=messages/messages --spring.datasource.url=jdbc:postgresql://localhost/petclinic --spring.sql.init.mode=always --spring.sql.init.schema-locations=classpath:db/postgres/schema.sql --spring.sql.init.data-locations=classpath:db/postgres/data.sql --spring.jpa.hibernate.ddl-auto=none" \
     > ../app.log 2>&1 < /dev/null &
@@ -220,13 +217,17 @@ main() {
   printHeader
   checkDependencies
   clonePetclinicRepo
-  createSymlink
+  #createSymlink
 
   # Change into the petclinic directory for subsequent operations
   echo "Changing into the petclinic directory"
   cd "${PETCLINIC_DIR}"
   echo "Current directory: $(pwd)"
-
+ 
+  # locking out repo this specific commit so it works with Java 17-21 
+  #git reset --hard 7deaa78575fa9f967256302cc6a5e2487bb31162
+  git reset --hard b26f235250627a235a2974a22f2317dbef27338d
+  
   setupPostgresql
   configureDatabase
   testLocalApplication
